@@ -724,6 +724,33 @@ def train_and_predict(df):
                         )
                         continue
             
+            # Check if filtered training data contains all required classes
+            y_train_fold = y.iloc[train_idx_filtered]
+            unique_classes = sorted(y_train_fold.unique())
+            
+            # XGBoost requires at least 2 classes, but we need all 3 for proper multi-class
+            # If we don't have all classes, skip this fold
+            if len(unique_classes) < 2:
+                print(
+                    color_text(
+                        f"CV Fold {fold}: Skipped (insufficient class diversity: {unique_classes})",
+                        Fore.YELLOW,
+                    )
+                )
+                continue
+            
+            # If we have all 3 classes, proceed normally
+            # If we only have 2 classes, we can still train but need to handle it
+            # For now, we'll skip folds that don't have all 3 classes to maintain consistency
+            if len(unique_classes) < len(TARGET_LABELS):
+                print(
+                    color_text(
+                        f"CV Fold {fold}: Skipped (missing classes: expected {TARGET_LABELS}, got {[ID_TO_LABEL[c] for c in unique_classes]})",
+                        Fore.YELLOW,
+                    )
+                )
+                continue
+            
             cv_model = build_model()
             cv_model.fit(X.iloc[train_idx_filtered], y.iloc[train_idx_filtered])
             if len(test_idx_array) > 0:

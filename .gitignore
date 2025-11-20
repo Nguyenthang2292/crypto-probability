@@ -28,3 +28,6 @@ ENV/
 # IDEs
 .vscode/
 .idea/
+
+# API Keys and Secrets (sensitive information)
+modules/config_api.py

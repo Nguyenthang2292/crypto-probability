@@ -7,3 +7,9 @@ scikit-learn
 colorama
 plotly
 gradio
+opencv-python
+pytesseract
+easyocr
+pillow
+streamlit
+imbalanced-learn
