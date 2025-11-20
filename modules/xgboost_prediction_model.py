@@ -1,5 +1,5 @@
 """
-Model training and prediction functions using XGBoost.
+Model training and prediction functions for xgboost_prediction_main.py
 """
 import numpy as np
 import pandas as pd
@@ -8,26 +8,8 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import TimeSeriesSplit
 from .utils import color_text
 from colorama import Fore, Style
-from .config import TARGET_LABELS, TARGET_HORIZON, MODEL_FEATURES, ID_TO_LABEL
-from .display import print_classification_report
-
-
-def build_model():
-    """Creates and returns a configured XGBoost classifier."""
-    return xgb.XGBClassifier(
-        n_estimators=200,
-        learning_rate=0.05,
-        max_depth=5,
-        subsample=0.9,
-        colsample_bytree=0.9,
-        gamma=0.1,
-        min_child_weight=3,
-        random_state=42,
-        objective="multi:softprob",
-        num_class=len(TARGET_LABELS),
-        eval_metric="mlogloss",
-        n_jobs=-1,
-    )
+from .config import TARGET_LABELS, TARGET_HORIZON, MODEL_FEATURES, ID_TO_LABEL, XGBOOST_PARAMS
+from .xgboost_prediction_display import print_classification_report
 
 
 def train_and_predict(df):
@@ -37,8 +19,15 @@ def train_and_predict(df):
     X = df[MODEL_FEATURES]
     y = df["Target"].astype(int)
 
+    def build_model():
+        # Use parameters from config, adding num_class dynamically
+        params = XGBOOST_PARAMS.copy()
+        params["num_class"] = len(TARGET_LABELS)
+        return xgb.XGBClassifier(**params)
+
     # Train/Test split (80/20) for evaluation metrics
     # IMPORTANT: Create a gap of TARGET_HORIZON between train and test to prevent data leakage
+    # The last TARGET_HORIZON rows of train set use future prices from test set to create labels
     split = int(len(df) * 0.8)
     train_end = split - TARGET_HORIZON
     test_start = split
@@ -112,6 +101,7 @@ def train_and_predict(df):
                 continue
             
             # Ensure test set doesn't overlap with gap
+            # Gap is sufficient when: test_start > train_end + TARGET_HORIZON
             test_idx_array = np.array(test_idx)
             if len(train_idx_filtered) > 0 and len(test_idx_array) > 0:
                 min_test_start = train_idx_filtered[-1] + TARGET_HORIZON + 1
@@ -132,6 +122,7 @@ def train_and_predict(df):
             unique_classes = sorted(y_train_fold.unique())
             
             # XGBoost requires at least 2 classes, but we need all 3 for proper multi-class
+            # If we don't have all classes, skip this fold
             if len(unique_classes) < 2:
                 print(
                     color_text(
@@ -141,7 +132,9 @@ def train_and_predict(df):
                 )
                 continue
             
-            # Skip folds that don't have all 3 classes to maintain consistency
+            # If we have all 3 classes, proceed normally
+            # If we only have 2 classes, we can still train but need to handle it
+            # For now, we'll skip folds that don't have all 3 classes to maintain consistency
             if len(unique_classes) < len(TARGET_LABELS):
                 print(
                     color_text(

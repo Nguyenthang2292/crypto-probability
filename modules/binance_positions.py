@@ -14,6 +14,21 @@ except ImportError:
     BINANCE_API_KEY = None
     BINANCE_API_SECRET = None
 
+try:
+    from .utils import normalize_symbol
+except ImportError:
+    # Fallback nếu utils chưa có normalize_symbol
+    def normalize_symbol(user_input: str, quote: str = "USDT") -> str:
+        """Fallback normalize_symbol function."""
+        if not user_input:
+            return f"BTC/{quote}"
+        norm = user_input.strip().upper()
+        if "/" in norm:
+            return norm.split(':')[0]  # Remove contract marker if present
+        if norm.endswith(quote):
+            return f"{norm[:-len(quote)]}/{quote}"
+        return f"{norm}/{quote}"
+
 # Initialize colorama
 colorama_init(autoreset=True)
 
@@ -101,13 +116,12 @@ def get_binance_futures_positions(api_key: str = None, api_secret: str = None, t
                 # Kiểm tra nếu là USDT-M (không phải COIN-M)
                 symbol = pos.get('symbol', '')
                 
-                # Chuẩn hóa symbol format
+                # Chuẩn hóa symbol format sử dụng normalize_symbol từ utils
+                # Xử lý contract marker từ ccxt (loại bỏ phần sau dấu :)
                 if ':' in symbol:
-                    # Format từ ccxt: "BTC/USDT:USDT" -> "BTC/USDT"
-                    symbol = symbol.replace('/USDT:USDT', '/USDT').split(':')[0]
-                elif not '/' in symbol and 'USDT' in symbol:
-                    # Format "DASHUSDT" -> "DASH/USDT"
-                    symbol = symbol.replace('USDT', '/USDT')
+                    symbol = symbol.split(':')[0]
+                # Sử dụng normalize_symbol để chuẩn hóa format
+                symbol = normalize_symbol(symbol, quote="USDT")
                 
                 # Chỉ lấy USDT-M positions
                 if '/USDT' in symbol or symbol.endswith('USDT'):
@@ -192,7 +206,7 @@ def get_binance_futures_positions(api_key: str = None, api_secret: str = None, t
                                 pass
                     
                     open_positions.append({
-                        'symbol': symbol if '/' in symbol else symbol.replace('USDT', '/USDT'),
+                        'symbol': symbol,  # Đã được normalize ở trên
                         'size_usdt': size_usdt,
                         'entry_price': entry_price,
                         'direction': direction,

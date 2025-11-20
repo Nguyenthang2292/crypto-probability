@@ -1,5 +1,5 @@
 """
-Technical indicators and candlestick pattern detection.
+Technical indicators and candlestick pattern detection for xgboost_prediction_main.py
 """
 import numpy as np
 import pandas as pd
@@ -190,9 +190,8 @@ def calculate_indicators(df, apply_labels=True):
     df = add_candlestick_patterns(df)
 
     # Apply directional labels if requested
-    # Import here to avoid circular dependency
     if apply_labels:
-        from .labeling import apply_directional_labels
+        from .xgboost_prediction_labeling import apply_directional_labels
         df = apply_directional_labels(df)
 
     return df

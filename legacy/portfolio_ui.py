@@ -6,7 +6,7 @@ import numpy as np
 import re
 from portfolio_manager import PortfolioManager
 from colorama import Fore, Style, init as colorama_init
-from modules.data_fetcher import normalize_symbol
+from modules.utils import normalize_symbol
 
 # Try to import image processing libraries
 try:

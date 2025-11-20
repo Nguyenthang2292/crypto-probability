@@ -1,11 +1,9 @@
-"""
-Main entry point for the crypto prediction system.
-"""
 import warnings
-import numpy as np
-from colorama import init as colorama_init
-from colorama import Fore, Style
 
+import numpy as np
+from colorama import Fore, Style, init as colorama_init
+
+# Import from xgboost_prediction_ modules (modules specific to xgboost_prediction_main.py)
 from modules.config import (
     DEFAULT_SYMBOL,
     DEFAULT_QUOTE,
@@ -15,24 +13,24 @@ from modules.config import (
     DEFAULT_EXCHANGES,
     TARGET_HORIZON,
     TARGET_BASE_THRESHOLD,
+    TARGET_LABELS,
     LABEL_TO_ID,
     ID_TO_LABEL,
-    TARGET_LABELS,
 )
-from modules.cli import parse_args, resolve_input
-from modules.data_fetcher import fetch_data, normalize_symbol
-from modules.indicators import calculate_indicators
-from modules.labeling import apply_directional_labels
-from modules.model import train_and_predict, predict_next_move
-from modules.utils import color_text, format_price, get_prediction_window
+from modules.utils import color_text, format_price
+from modules.xgboost_prediction_utils import get_prediction_window
+from modules.xgboost_prediction_cli import parse_args, resolve_input
+from modules.xgboost_prediction_data_fetcher import fetch_data_from_ccxt
+from modules.utils import normalize_symbol
+from modules.xgboost_prediction_indicators import calculate_indicators
+from modules.xgboost_prediction_labeling import apply_directional_labels
+from modules.xgboost_prediction_model import train_and_predict, predict_next_move
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings("ignore")
 colorama_init(autoreset=True)
 
-
 def main():
-    """Main function that orchestrates the prediction workflow."""
     args = parse_args()
     allow_prompt = not args.no_prompt
 
@@ -47,9 +45,8 @@ def main():
     ] or DEFAULT_EXCHANGES
 
     def run_once(raw_symbol):
-        """Processes a single symbol prediction."""
         symbol = normalize_symbol(raw_symbol, quote)
-        df, exchange_id = fetch_data(
+        df, exchange_id = fetch_data_from_ccxt(
             symbol, timeframe, limit=limit, exchanges=exchanges
         )
         exchange_label = exchange_id.upper() if exchange_id else "UNKNOWN"
@@ -185,7 +182,6 @@ def main():
             )
     except KeyboardInterrupt:
         print(color_text("\nExiting program by user request.", Fore.YELLOW))
-
 
 if __name__ == "__main__":
     main()

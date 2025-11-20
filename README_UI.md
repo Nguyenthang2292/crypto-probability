@@ -178,7 +178,7 @@ pip install gradio plotly
 
 ## 🆚 Comparison with CLI / So sánh với CLI
 
-| Feature / Tính năng | CLI (`crypto_simple_enhance.py`) | UI (`crypto_ui_gradio.py`) |
+| Feature / Tính năng | CLI (`xgboost_prediction_main.py`) | UI (`crypto_ui_gradio.py`) |
 |---------------------|----------------------------------|---------------------------|
 | Ease of Use / Dễ sử dụng | ⭐⭐ | ⭐⭐⭐⭐⭐ |
 | Speed / Tốc độ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
@@ -191,7 +191,7 @@ pip install gradio plotly
 
 ## 🔗 Links / Liên kết
 
-- Main File / File chính: `crypto_simple_enhance.py`
+- Main File / File chính: `xgboost_prediction_main.py`
 - UI File / File UI: `crypto_ui_gradio.py`
 - Requirements: `requirements.txt`
 - Main README: [README.md](README.md)

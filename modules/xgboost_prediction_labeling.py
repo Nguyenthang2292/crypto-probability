@@ -1,5 +1,5 @@
 """
-Labeling functions for creating target labels based on future price movements.
+Labeling functions for xgboost_prediction_main.py
 """
 import numpy as np
 import pandas as pd

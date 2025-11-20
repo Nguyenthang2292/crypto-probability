@@ -1,10 +1,10 @@
 """
-Utility functions for timeframe conversion, formatting, and text coloring.
+Common utility functions for all algorithms.
 """
 import re
 import pandas as pd
 from colorama import Fore, Style
-from .config import PREDICTION_WINDOWS
+from .config import DEFAULT_QUOTE
 
 
 def timeframe_to_minutes(timeframe: str) -> int:
@@ -29,16 +29,10 @@ def timeframe_to_minutes(timeframe: str) -> int:
     return 60
 
 
-def get_prediction_window(timeframe: str) -> str:
-    """
-    Returns a textual description of the prediction horizon based on timeframe.
-    """
-    timeframe = timeframe.lower()
-    return PREDICTION_WINDOWS.get(timeframe, "next sessions")
-
-
 def color_text(text: str, color: str = Fore.WHITE, style: str = Style.NORMAL) -> str:
-    """Applies color and style to text using colorama."""
+    """
+    Applies color and style to text using colorama.
+    """
     return f"{style}{color}{text}{Style.RESET_ALL}"
 
 
@@ -60,4 +54,28 @@ def format_price(value: float) -> str:
         precision = 8
 
     return f"{value:.{precision}f}"
+
+
+def normalize_symbol(user_input: str, quote: str = DEFAULT_QUOTE) -> str:
+    """
+    Converts user input like 'xmr' into 'XMR/USDT'. Keeps existing slash pairs.
+    
+    Args:
+        user_input: User input symbol (e.g., 'btc', 'BTC/USDT', 'btcusdt')
+        quote: Quote currency (default: DEFAULT_QUOTE)
+    
+    Returns:
+        Normalized symbol in format 'BASE/QUOTE' (e.g., 'BTC/USDT')
+    """
+    if not user_input:
+        return f"BTC/{quote}"
+
+    norm = user_input.strip().upper()
+    if "/" in norm:
+        return norm
+
+    if norm.endswith(quote):
+        return f"{norm[:-len(quote)]}/{quote}"
+
+    return f"{norm}/{quote}"
 

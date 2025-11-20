@@ -1,33 +1,16 @@
 """
-Data fetching functions for cryptocurrency market data.
+Data fetching functions for xgboost_prediction_main.py
 """
 import ccxt
 import pandas as pd
 from .utils import color_text, timeframe_to_minutes
 from colorama import Fore, Style
-from .config import DEFAULT_EXCHANGES, DEFAULT_QUOTE
+from .config import DEFAULT_EXCHANGES
 
 
-def normalize_symbol(user_input: str, quote: str = DEFAULT_QUOTE) -> str:
+def fetch_data_from_ccxt(symbol="BTC/USDT", timeframe="1h", limit=1000, exchanges=None):
     """
-    Converts user input like 'xmr' into 'XMR/USDT'. Keeps existing slash pairs.
-    """
-    if not user_input:
-        return f"BTC/{quote}"
-
-    norm = user_input.strip().upper()
-    if "/" in norm:
-        return norm
-
-    if norm.endswith(quote):
-        return f"{norm[:-len(quote)]}/{quote}"
-
-    return f"{norm}/{quote}"
-
-
-def fetch_data(symbol="BTC/USDT", timeframe="1h", limit=1000, exchanges=None):
-    """
-    Fetches OHLCV data trying multiple exchanges until fresh data is returned.
+    Fetches OHLCV data from CCXT exchanges trying multiple exchanges until fresh data is returned.
     """
     exchanges = exchanges or DEFAULT_EXCHANGES
     freshness_minutes = max(timeframe_to_minutes(timeframe) * 1.5, 5)

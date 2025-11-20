@@ -1,7 +1,6 @@
 """
-Display and reporting functions for model evaluation and results.
+Display and reporting functions for xgboost_prediction_main.py
 """
-import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
 from .utils import color_text
 from colorama import Fore, Style

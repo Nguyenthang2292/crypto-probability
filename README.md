@@ -37,7 +37,7 @@ Then open your browser at `http://localhost:7860` / Sau đó mở trình duyệt
 
 Run the CLI script: / Chạy script CLI:
 ```bash
-python crypto_simple_enhance.py
+python xgboost_prediction_main.py
 ```
 
 Enter the symbol (e.g., `BTC/USDT`) and select the timeframe when prompted. / Nhập symbol (ví dụ: `BTC/USDT`) và chọn timeframe khi được yêu cầu.
@@ -52,7 +52,7 @@ python crypto_prediction.py
 ## Files / Các File
 
 - `crypto_ui_gradio.py` - Web UI using Gradio (recommended) / Giao diện web sử dụng Gradio (khuyến nghị)
-- `crypto_simple_enhance.py` - Enhanced CLI with advanced indicators / CLI nâng cao với các chỉ báo tiên tiến
+- `xgboost_prediction_main.py` - Enhanced CLI with advanced indicators / CLI nâng cao với các chỉ báo tiên tiến
 - `crypto_prediction.py` - Original prediction script / Script dự đoán gốc
 - `README_UI.md` - Detailed UI guide (Vietnamese) / Hướng dẫn UI chi tiết (Tiếng Việt)
 

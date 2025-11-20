@@ -1,5 +1,5 @@
 """
-Command-line interface and input handling functions.
+Command-line interface for xgboost_prediction_main.py
 """
 import argparse
 from .utils import color_text
@@ -12,9 +12,7 @@ from .config import (
     DEFAULT_EXCHANGE_STRING,
 )
 
-
 def prompt_with_default(message: str, default, cast=str):
-    """Prompts user for input with a default value."""
     while True:
         raw = input(color_text(f"{message} (default {default}): ", Fore.CYAN))
         value = raw.strip()
@@ -27,7 +25,6 @@ def prompt_with_default(message: str, default, cast=str):
 
 
 def resolve_input(cli_value, default, prompt_message, cast=str, allow_prompt=True):
-    """Resolves input from CLI argument or user prompt."""
     if cli_value is not None:
         return cast(cli_value)
     if allow_prompt:
@@ -36,7 +33,6 @@ def resolve_input(cli_value, default, prompt_message, cast=str, allow_prompt=Tru
 
 
 def parse_args():
-    """Parses command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Crypto movement predictor using technical indicators and XGBoost."
     )
