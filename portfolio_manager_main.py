@@ -9,13 +9,13 @@ from typing import List, Optional
 from colorama import Fore, Style, init as colorama_init
 
 try:
-    from modules.Position import Position
-    from modules.utils import color_text
-    from modules.ExchangeManager import ExchangeManager
-    from modules.DataFetcher import DataFetcher
-    from modules.PortfolioRiskCalculator import PortfolioRiskCalculator
-    from modules.PortfolioCorrelationAnalyzer import PortfolioCorrelationAnalyzer
-    from modules.HedgeFinder import HedgeFinder
+    from modules.common.Position import Position
+    from modules.common.utils import color_text
+    from modules.common.ExchangeManager import ExchangeManager
+    from modules.common.DataFetcher import DataFetcher
+    from modules.portfolio.risk_calculator import PortfolioRiskCalculator
+    from modules.portfolio.correlation_analyzer import PortfolioCorrelationAnalyzer
+    from modules.portfolio.hedge_finder import HedgeFinder
     from modules.config import (
         BENCHMARK_SYMBOL,
         DEFAULT_VAR_CONFIDENCE,
@@ -39,11 +39,19 @@ colorama_init(autoreset=True)
 class PortfolioManager:
     """Main portfolio manager orchestrating all components."""
 
-    def __init__(self, api_key=None, api_secret=None, testnet=False):
+    def __init__(
+        self,
+        api_key=None,
+        api_secret=None,
+        testnet=False,
+        install_signal_handlers: bool = False,
+    ):
         self.positions: List[Position] = []
         self.benchmark_symbol = BENCHMARK_SYMBOL
         self.shutdown_event = threading.Event()
-        signal.signal(signal.SIGINT, self._handle_shutdown)
+        self._signal_handlers_registered = False
+        if install_signal_handlers:
+            self.install_signal_handlers()
 
         # Initialize components
         self.exchange_manager = ExchangeManager(api_key, api_secret, testnet)
@@ -68,6 +76,22 @@ class PortfolioManager:
             )
             self.shutdown_event.set()
         sys.exit(0)
+
+    def install_signal_handlers(self):
+        """Register OS signal handlers for graceful shutdown when running from CLI."""
+        if self._signal_handlers_registered:
+            return
+        if threading.current_thread() is not threading.main_thread():
+            raise RuntimeError(
+                "Signal handlers can only be installed from the main thread."
+            )
+        signal.signal(signal.SIGINT, self._handle_shutdown)
+        try:
+            signal.signal(signal.SIGTERM, self._handle_shutdown)
+        except AttributeError:
+            # SIGTERM may not be available on some platforms (e.g., Windows)
+            pass
+        self._signal_handlers_registered = True
 
     def _should_stop(self) -> bool:
         """Check if shutdown was requested."""
@@ -103,12 +127,21 @@ class PortfolioManager:
         ]
 
         # Update exchange manager credentials if provided
+        credentials_updated = False
         if api_key is not None:
             self.exchange_manager.api_key = api_key
+            credentials_updated = True
         if api_secret is not None:
             self.exchange_manager.api_secret = api_secret
+            credentials_updated = True
         if testnet is not None:
             self.exchange_manager.testnet = testnet
+
+        if credentials_updated:
+            self.exchange_manager.authenticated.update_default_credentials(
+                api_key=self.exchange_manager.api_key,
+                api_secret=self.exchange_manager.api_secret,
+            )
 
     def fetch_prices(self):
         """Fetches current prices for all symbols from Binance."""
@@ -330,6 +363,7 @@ def main():
 
     try:
         pm = PortfolioManager()
+        pm.install_signal_handlers()
     except Exception as e:
         print(color_text(f"Error initializing PortfolioManager: {e}", Fore.RED))
         return

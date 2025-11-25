@@ -1,27 +1,19 @@
 """
-Configuration constants for xgboost_prediction_main.py and portfolio_manager_main.py
+Configuration constants for all components.
+
+Organized by component:
+1. Common/Shared Configuration
+2. XGBoost Prediction Configuration
+3. Portfolio Manager Configuration
+4. Deep Learning Configuration
+5. Pairs Trading Configuration
 """
 
-DEFAULT_SYMBOL = "BTC/USDT"
-DEFAULT_QUOTE = "USDT"
-DEFAULT_TIMEFRAME = "1h"
-DEFAULT_LIMIT = 1500
+# ============================================================================
+# COMMON / SHARED CONFIGURATION
+# ============================================================================
 
-# Portfolio Manager Configuration
-BENCHMARK_SYMBOL = "BTC/USDT"  # Default benchmark for beta calculation
-DEFAULT_REQUEST_PAUSE = 0.2  # Default pause between API requests (seconds)
-DEFAULT_CONTRACT_TYPE = "future"  # Default contract type: 'spot', 'margin', or 'future'
-DEFAULT_BETA_MIN_POINTS = 50  # Minimum data points required for beta calculation
-DEFAULT_BETA_LIMIT = 1000  # Default limit for beta calculation OHLCV fetch
-DEFAULT_BETA_TIMEFRAME = "1h"  # Default timeframe for beta calculation
-DEFAULT_CORRELATION_MIN_POINTS = 10  # Minimum data points for correlation analysis
-DEFAULT_WEIGHTED_CORRELATION_MIN_POINTS = (
-    10  # Minimum data points for weighted correlation
-)
-DEFAULT_VAR_CONFIDENCE = 0.95  # Default confidence level for VaR calculation (95%)
-DEFAULT_VAR_LOOKBACK_DAYS = 60  # Default lookback period for VaR calculation (days)
-DEFAULT_VAR_MIN_HISTORY_DAYS = 20  # Minimum history required for reliable VaR
-DEFAULT_VAR_MIN_PNL_SAMPLES = 10  # Minimum PnL samples required for VaR
+# Default exchange settings
 DEFAULT_EXCHANGES = [
     "binance",
     "kraken",
@@ -33,6 +25,28 @@ DEFAULT_EXCHANGES = [
     "huobi",
 ]
 DEFAULT_EXCHANGE_STRING = ",".join(DEFAULT_EXCHANGES)
+DEFAULT_REQUEST_PAUSE = 0.2  # Pause between API requests (seconds)
+DEFAULT_CONTRACT_TYPE = "future"  # Contract type: 'spot', 'margin', or 'future'
+
+# Default data fetching settings
+DEFAULT_SYMBOL = "BTC/USDT"
+DEFAULT_QUOTE = "USDT"
+DEFAULT_TIMEFRAME = "1h"
+DEFAULT_LIMIT = 1500
+
+
+# ============================================================================
+# XGBOOST PREDICTION CONFIGURATION
+# ============================================================================
+
+# Prediction target configuration
+TARGET_HORIZON = 24  # Number of candles to predict ahead
+TARGET_BASE_THRESHOLD = 0.01  # Base threshold for directional labeling (1%)
+TARGET_LABELS = ["DOWN", "NEUTRAL", "UP"]
+LABEL_TO_ID = {label: idx for idx, label in enumerate(TARGET_LABELS)}
+ID_TO_LABEL = {idx: label for label, idx in LABEL_TO_ID.items()}
+
+# Prediction windows mapping
 PREDICTION_WINDOWS = {
     "30m": "12h",
     "45m": "18h",
@@ -43,11 +57,6 @@ PREDICTION_WINDOWS = {
     "12h": "7d",
     "1d": "7d",
 }
-TARGET_HORIZON = 24
-TARGET_BASE_THRESHOLD = 0.01
-TARGET_LABELS = ["DOWN", "NEUTRAL", "UP"]
-LABEL_TO_ID = {label: idx for idx, label in enumerate(TARGET_LABELS)}
-ID_TO_LABEL = {idx: label for label, idx in LABEL_TO_ID.items()}
 
 # Dynamic Lookback Weight Configuration
 # Controls how historical reference prices are weighted based on volatility
@@ -99,7 +108,6 @@ MODEL_FEATURES = [
     "DARK_CLOUD",
 ]
 
-
 # XGBoost Model Hyperparameters
 XGBOOST_PARAMS = {
     "n_estimators": 200,  # Số lượng cây quyết định (trees). Càng nhiều càng phức tạp, dễ overfitting.
@@ -115,7 +123,36 @@ XGBOOST_PARAMS = {
     "n_jobs": -1,  # Sử dụng tất cả lõi CPU.
 }
 
-# Deep Learning Data Pipeline Configuration
+
+# ============================================================================
+# PORTFOLIO MANAGER CONFIGURATION
+# ============================================================================
+
+# Benchmark configuration
+BENCHMARK_SYMBOL = "BTC/USDT"  # Default benchmark for beta calculation
+
+# Beta calculation configuration
+DEFAULT_BETA_MIN_POINTS = 50  # Minimum data points required for beta calculation
+DEFAULT_BETA_LIMIT = 1000  # Default limit for beta calculation OHLCV fetch
+DEFAULT_BETA_TIMEFRAME = "1h"  # Default timeframe for beta calculation
+
+# Correlation analysis configuration
+DEFAULT_CORRELATION_MIN_POINTS = 10  # Minimum data points for correlation analysis
+DEFAULT_WEIGHTED_CORRELATION_MIN_POINTS = (
+    10  # Minimum data points for weighted correlation
+)
+
+# VaR (Value at Risk) configuration
+DEFAULT_VAR_CONFIDENCE = 0.95  # Default confidence level for VaR calculation (95%)
+DEFAULT_VAR_LOOKBACK_DAYS = 60  # Default lookback period for VaR calculation (days)
+DEFAULT_VAR_MIN_HISTORY_DAYS = 20  # Minimum history required for reliable VaR
+DEFAULT_VAR_MIN_PNL_SAMPLES = 10  # Minimum PnL samples required for VaR
+
+
+# ============================================================================
+# DEEP LEARNING CONFIGURATION
+# ============================================================================
+
 # Triple Barrier Method defaults
 DEEP_TRIPLE_BARRIER_TP_THRESHOLD = 0.02  # 2% take profit threshold
 DEEP_TRIPLE_BARRIER_SL_THRESHOLD = 0.01  # 1% stop loss threshold
@@ -183,3 +220,39 @@ DEEP_ACCELERATOR = "auto"  # Accelerator: 'auto', 'gpu', 'cpu'
 DEEP_DEVICES = 1  # Number of devices to use
 DEEP_PRECISION = 32  # Precision: 16, 32, or 'bf16'
 DEEP_GRADIENT_CLIP_VAL = 0.5  # Gradient clipping value (None to disable)
+
+
+# ============================================================================
+# PAIRS TRADING CONFIGURATION
+# ============================================================================
+
+# Performance analysis weights
+PAIRS_TRADING_WEIGHTS = {
+    '1d': 0.3,   # Trọng số cho 1 ngày (24 candles)
+    '3d': 0.4,   # Trọng số cho 3 ngày (72 candles)
+    '1w': 0.3    # Trọng số cho 1 tuần (168 candles)
+}
+
+# Performance analysis settings
+PAIRS_TRADING_TOP_N = 5  # Số lượng top/bottom performers
+PAIRS_TRADING_MIN_CANDLES = 168  # Số candles tối thiểu (1 tuần = 168h)
+PAIRS_TRADING_TIMEFRAME = "1h"  # Timeframe cho phân tích
+PAIRS_TRADING_LIMIT = 200  # Số candles cần fetch (đủ cho 1 tuần + buffer)
+
+# Pairs validation settings
+PAIRS_TRADING_MIN_VOLUME = 1000000  # Volume tối thiểu (USDT) để xem xét
+PAIRS_TRADING_MIN_SPREAD = 0.01  # Spread tối thiểu (%)
+PAIRS_TRADING_MAX_SPREAD = 0.50  # Spread tối đa (%)
+PAIRS_TRADING_MIN_CORRELATION = 0.3  # Correlation tối thiểu để xem xét
+PAIRS_TRADING_MAX_CORRELATION = 0.9  # Correlation tối đa (tránh quá tương quan)
+PAIRS_TRADING_CORRELATION_MIN_POINTS = 50  # Số điểm dữ liệu tối thiểu để tính correlation
+PAIRS_TRADING_ADF_PVALUE_THRESHOLD = 0.05  # Ngưỡng p-value để xác nhận cointegration
+PAIRS_TRADING_MAX_HALF_LIFE = 50  # Số candles tối đa cho half-life (mean reversion)
+PAIRS_TRADING_ZSCORE_LOOKBACK = 60  # Số candles để tính rolling z-score
+PAIRS_TRADING_HURST_THRESHOLD = 0.5  # Hurst exponent threshold (mean reversion < 0.5)
+PAIRS_TRADING_MIN_SPREAD_SHARPE = 1.0  # Sharpe tối thiểu cho spread
+PAIRS_TRADING_MAX_DRAWDOWN = 0.3  # Drawdown tối đa (30%)
+PAIRS_TRADING_MIN_CALMAR = 1.0  # Calmar ratio tối thiểu
+PAIRS_TRADING_JOHANSEN_CONFIDENCE = 0.95  # Mức confidence cho Johansen test
+PAIRS_TRADING_PERIODS_PER_YEAR = 365 * 24  # Số kỳ trong năm (timeframe 1h)
+PAIRS_TRADING_CLASSIFICATION_ZSCORE = 0.5  # Ngưỡng z-score cho phân loại direction

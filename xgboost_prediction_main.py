@@ -17,19 +17,18 @@ from modules.config import (
     LABEL_TO_ID,
     ID_TO_LABEL,
 )
-from modules.utils import color_text, format_price
-from modules.xgboost_prediction_utils import get_prediction_window
-from modules.xgboost_prediction_cli import parse_args, resolve_input
-from modules.utils import normalize_symbol
-from modules.ExchangeManager import ExchangeManager
-from modules.DataFetcher import DataFetcher
-from modules.IndicatorEngine import (
+from modules.common.utils import color_text, format_price, normalize_symbol
+from modules.xgboost.utils import get_prediction_window
+from modules.xgboost.cli import parse_args, resolve_input
+from modules.common.ExchangeManager import ExchangeManager
+from modules.common.DataFetcher import DataFetcher
+from modules.common.IndicatorEngine import (
     IndicatorConfig,
     IndicatorEngine,
     IndicatorProfile,
 )
-from modules.xgboost_prediction_labeling import apply_directional_labels
-from modules.xgboost_prediction_model import train_and_predict, predict_next_move
+from modules.xgboost.labeling import apply_directional_labels
+from modules.xgboost.model import train_and_predict, predict_next_move
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings("ignore")
@@ -149,11 +148,40 @@ def main():
             print(color_text(f"Probabilities -> {prob_summary}", Fore.WHITE))
 
             if direction == "NEUTRAL":
+                # Calculate upper and lower price bounds based on threshold
+                upper_bound = current_price * (1 + threshold_value)
+                lower_bound = current_price * (1 - threshold_value)
+                price_range = upper_bound - lower_bound
+                
                 print(
                     color_text(
                         "Market expected to stay within +/-{:.2f}% over the next {} candles.".format(
                             threshold_value * 100, TARGET_HORIZON
                         ),
+                        Fore.YELLOW,
+                    )
+                )
+                print(
+                    color_text(
+                        f"Price Range: {format_price(lower_bound)} - {format_price(upper_bound)}",
+                        Fore.YELLOW,
+                    )
+                )
+                print(
+                    color_text(
+                        f"  Upper Bound: {format_price(upper_bound)} (+{threshold_value*100:.2f}%)",
+                        Fore.YELLOW,
+                    )
+                )
+                print(
+                    color_text(
+                        f"  Lower Bound: {format_price(lower_bound)} (-{threshold_value*100:.2f}%)",
+                        Fore.YELLOW,
+                    )
+                )
+                print(
+                    color_text(
+                        f"  Range Width: {format_price(price_range)} ({threshold_value*200:.2f}%)",
                         Fore.YELLOW,
                     )
                 )

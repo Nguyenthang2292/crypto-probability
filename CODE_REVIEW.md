@@ -163,6 +163,30 @@ pytest-cov>=4.0.0
 - Implement caching với `functools.lru_cache` hoặc Redis
 - Profile code để identify bottlenecks
 
+### 12. **Đăng Ký Tín Hiệu Trong Constructor**
+
+**Vấn đề:**
+- `PortfolioManager` gọi `signal.signal(SIGINT, ...)` ngay trong `__init__`.
+- Khi khởi tạo từ thread phụ (ví dụ worker FastAPI), Python ném `ValueError: signal only works in main thread`.
+
+**Đề xuất:**
+- Chỉ đăng ký handler trong entry-point CLI (`if __name__ == "__main__":`), hoặc cung cấp flag để controller bên ngoài quyết định.
+- Giữ `shutdown_event` trong class nhưng việc wiring tín hiệu nên xử lý bên ngoài để tái sử dụng component trong dịch vụ khác.
+
+**Trạng thái:** ĐÃ KHẮC PHỤC (11/2025) – `PortfolioManager` nhận tham số `install_signal_handlers` (mặc định `False`) và cung cấp method `install_signal_handlers()` để CLI chủ động đăng ký khi chạy ở main thread (`main()` đã gọi rõ ràng), vì vậy embedders không còn gặp lỗi tín hiệu.
+
+### 13. **requirements.txt Quá “Nặng” & Không Pin Version**
+
+**Vấn đề:**
+- Toàn bộ stack Torch/TFT/OCR được cài mặc định dù nhiều người chỉ cần core pipeline ⇒ thời gian cài đặt rất dài và dễ fail trên máy không có CUDA.
+- Thiếu version pinning khiến CI khó tái lập.
+
+**Đề xuất:**
+- Tách `requirements.txt` (core) và `requirements-ml.txt`, `requirements-ocr.txt`, `requirements-dev.txt`, sau đó dùng extras trong `pyproject`.
+- Pin version tối thiểu cho các gói lớn (torch, pytorch-lightning, ccxt, pandas, v.v.) để tránh regression ngoài ý muốn.
+
+**Trạng thái:** ĐÃ KHẮC PHỤC (11/2025) – Core deps trong `requirements.txt` đã pin version, còn các stack ML/OCR/dev được tách sang `requirements-ml.txt`, `requirements-ocr.txt`, `requirements-dev.txt` nên người dùng/CI chỉ cài thứ cần thiết.
+
 ---
 
 ## 🎯 Đề Xuất Cải Tiến Ưu Tiên

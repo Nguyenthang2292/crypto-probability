@@ -1,35 +1,75 @@
 # 📚 Documentation
 
-Thư mục này chứa tất cả các file tài liệu (.md) của project để dễ quản lý và tách biệt khỏi code.
+Thư mục này chứa tất cả các file tài liệu (.md) của project, được tổ chức theo components để dễ quản lý và tìm kiếm.
 
-## Danh sách tài liệu
-
-### Core Modules
-- **[DataFetcher.md](./DataFetcher.md)** - Tài liệu về DataFetcher class, cách lấy dữ liệu OHLCV và giá hiện tại từ exchanges
-- **[ExchangeManager.md](./ExchangeManager.md)** - Tài liệu về ExchangeManager, AuthenticatedExchangeManager và PublicExchangeManager
-- **[PortfolioCorrelationAnalyzer.md](./PortfolioCorrelationAnalyzer.md)** - Tài liệu về PortfolioCorrelationAnalyzer, phân tích correlation giữa portfolio và symbols
-
-### Deep Learning Modules
-- **[feature_selection.md](./feature_selection.md)** - Tài liệu về FeatureSelector, chọn lọc và kỹ thuật hóa features cho deep learning
-- **[deeplearning_data_pipeline.md](./deeplearning_data_pipeline.md)** - Tài liệu về DeepLearningDataPipeline, pipeline chuẩn bị data cho TFT
-- **[deeplearning_dataset.md](./deeplearning_dataset.md)** - Tài liệu về TFTDataModule, tạo TimeSeriesDataSet và DataLoaders cho TFT
-
-## Cấu trúc
+## Cấu Trúc
 
 ```
 docs/
-├── README.md                      # File này
-├── DataFetcher.md                 # Tài liệu DataFetcher
-├── ExchangeManager.md              # Tài liệu ExchangeManager
-├── PortfolioCorrelationAnalyzer.md # Tài liệu PortfolioCorrelationAnalyzer
-├── feature_selection.md            # Tài liệu FeatureSelector
-├── deeplearning_data_pipeline.md   # Tài liệu DeepLearningDataPipeline
-└── deeplearning_dataset.md         # Tài liệu TFTDataModule
+├── README.md                    # File này - Tổng quan documentation
+│
+├── common/                      # Shared utilities documentation
+│   ├── README.md
+│   └── ExchangeManager.md
+│
+├── xgboost/                     # XGBoost prediction documentation
+│   └── README.md
+│
+├── portfolio/                   # Portfolio management documentation
+│   └── README.md
+│
+├── deeplearning/                # Deep learning documentation
+│   ├── README.md
+│   ├── deeplearning_data_pipeline.md
+│   ├── deeplearning_model.md
+│   ├── deep_prediction_training.md
+│   └── feature_selection.md
+│
+└── pairs_trading/               # Pairs trading documentation
+    └── README.md
 ```
 
-## Lưu ý
+## Components
 
-- Tất cả các file documentation (.md) nên được đặt trong thư mục này
-- Các link nội bộ giữa các file .md sử dụng relative path (ví dụ: `./ExchangeManager.md`)
+### 🔧 Common / Shared Utilities
+Tài liệu cho các modules dùng chung cho tất cả components:
+- **[ExchangeManager](./common/ExchangeManager.md)** - Quản lý kết nối với các exchanges
+- Xem [README](./common/README.md) để biết thêm chi tiết
+
+### 📊 XGBoost Prediction
+Tài liệu cho XGBoost prediction component:
+- Xem [README](./xgboost/README.md) để biết thêm chi tiết
+
+### 💼 Portfolio Manager
+Tài liệu cho portfolio management component:
+- Xem [README](./portfolio/README.md) để biết thêm chi tiết về:
+  - PortfolioCorrelationAnalyzer - Phân tích correlation giữa portfolio và symbols
+  - Risk Calculator - Tính toán PnL, Delta, Beta, VaR
+  - Hedge Finder - Tìm hedge candidates
+
+### 🧠 Deep Learning
+Tài liệu cho deep learning prediction component:
+- **[Data Pipeline](./deeplearning/deeplearning_data_pipeline.md)** - Pipeline chuẩn bị data cho TFT
+- **[Model](./deeplearning/deeplearning_model.md)** - TFT model architecture
+- **[Training](./deeplearning/deep_prediction_training.md)** - Hướng dẫn training
+- **[Feature Selection](./deeplearning/feature_selection.md)** - Chọn lọc và kỹ thuật hóa features
+- Xem [README](./deeplearning/README.md) để biết thêm chi tiết
+
+### 🔄 Pairs Trading
+Tài liệu cho pairs trading analysis component:
+- Xem [README](./pairs_trading/README.md) để biết thêm chi tiết
+
+## Lưu Ý
+
+- Tất cả các file documentation (.md) được tổ chức theo components
+- Các link nội bộ giữa các file .md sử dụng relative path
+- Mỗi component có README.md riêng để mô tả chi tiết
 - Không nên đặt file .md trong thư mục `modules/` để tránh lẫn với code
 
+## Quick Links
+
+- [Common Utilities](./common/)
+- [XGBoost Prediction](./xgboost/)
+- [Portfolio Manager](./portfolio/)
+- [Deep Learning](./deeplearning/)
+- [Pairs Trading](./pairs_trading/)
