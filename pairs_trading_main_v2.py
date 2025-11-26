@@ -83,6 +83,13 @@ def display_pairs_opportunities(pairs_df, max_display=10, verbose=False):
         verbose: If True, show additional quantitative metrics
     """
 
+    def _pad_colored(text: str, width: int, color, style=None) -> str:
+        """Pad text to fixed width before applying ANSI colors to avoid misalignment."""
+        padded = text.ljust(width)
+        if style is None:
+            return color_text(padded, color)
+        return color_text(padded, color, style)
+
     if pairs_df is None or pairs_df.empty:
         print(color_text("\nNo pairs trading opportunities found.", Fore.YELLOW))
         return
@@ -115,11 +122,18 @@ def display_pairs_opportunities(pairs_df, max_display=10, verbose=False):
         opportunity_score = row["opportunity_score"] * 100
         quantitative_score = row.get("quantitative_score")
         is_cointegrated = row.get("is_cointegrated")
+        if (is_cointegrated is None or pd.isna(is_cointegrated)) and "is_johansen_cointegrated" in row:
+            alt_coint = row.get("is_johansen_cointegrated")
+            if alt_coint is not None and not pd.isna(alt_coint):
+                is_cointegrated = bool(alt_coint)
         
         # Get verbose metrics if available
         half_life = row.get("half_life")
         spread_sharpe = row.get("spread_sharpe")
         max_drawdown = row.get("max_drawdown")
+
+        # Prepare spread text
+        spread_text = f"{spread:+.2f}%"
 
         # Color code based on opportunity score
         if opportunity_score > 20:
@@ -128,6 +142,8 @@ def display_pairs_opportunities(pairs_df, max_display=10, verbose=False):
             score_color = Fore.YELLOW
         else:
             score_color = Fore.WHITE
+        opp_text = f"{opportunity_score:+.1f}%"
+        opp_display = _pad_colored(opp_text, 12, score_color)
 
         # Color code quantitative score
         if quantitative_score is not None and not pd.isna(quantitative_score):
@@ -141,6 +157,7 @@ def display_pairs_opportunities(pairs_df, max_display=10, verbose=False):
         else:
             quant_color = Fore.WHITE
             quant_text = "N/A"
+        quant_display = _pad_colored(quant_text, 12, quant_color)
 
         # Cointegration status
         if is_cointegrated is not None and not pd.isna(is_cointegrated):
@@ -149,6 +166,8 @@ def display_pairs_opportunities(pairs_df, max_display=10, verbose=False):
         else:
             coint_status = "?"
             coint_color = Fore.WHITE
+        coint_display = _pad_colored(coint_status, 7, coint_color)
+        coint_display_verbose = _pad_colored(coint_status, 9, coint_color)
 
         # Color code correlation
         if correlation is not None and not pd.isna(correlation):
@@ -163,6 +182,7 @@ def display_pairs_opportunities(pairs_df, max_display=10, verbose=False):
         else:
             corr_color = Fore.WHITE
             corr_text = "N/A"
+        corr_display = _pad_colored(corr_text, 12, corr_color)
 
         if verbose:
             # Format verbose metrics
@@ -172,17 +192,19 @@ def display_pairs_opportunities(pairs_df, max_display=10, verbose=False):
             
             print(
                 f"{rank:<6} {long_symbol:<15} {short_symbol:<15} "
-                f"{spread:+.2f}%{'':<4} {color_text(corr_text, corr_color):<10} "
-                f"{color_text(f'{opportunity_score:+.1f}%', score_color):<12} "
-                f"{color_text(quant_text, quant_color):<14} {color_text(coint_status, coint_color):<9} "
+                f"{spread_text:<10} {corr_display} "
+                f"{opp_display} "
+                f"{quant_display} "
+                f"{coint_display_verbose}"
                 f"{half_life_text:<12} {sharpe_text:<12} {maxdd_text:<12}"
             )
         else:
             print(
                 f"{rank:<6} {long_symbol:<18} {short_symbol:<18} "
-                f"{spread:+.2f}%{'':<6} {color_text(corr_text, corr_color):<17} "
-                f"{color_text(f'{opportunity_score:+.1f}%', score_color):<14} "
-                f"{color_text(quant_text, quant_color):<14} {color_text(coint_status, coint_color):<7}"
+                f"{spread_text:<12} {corr_display} "
+                f"{opp_display} "
+                f"{quant_display} "
+                f"{coint_display}"
             )
 
     print(color_text(f"{'=' * 120}", Fore.MAGENTA, Style.BRIGHT))
