@@ -163,7 +163,7 @@ def main():
         "--weights",
         type=str,
         default=None,
-        help="Weights for timeframes in format '1d:0.3,3d:0.4,1w:0.3' (default: from config)",
+        help="Weights for timeframes in format '1d:0.5,3d:0.3,1w:0.2' (default: from config)",
     )
     parser.add_argument(
         "--min-volume",

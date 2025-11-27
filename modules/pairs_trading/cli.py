@@ -25,7 +25,7 @@ try:
         PAIRS_TRADING_MAX_HALF_LIFE,
     )
 except ImportError:
-    PAIRS_TRADING_WEIGHTS = {"1d": 0.3, "3d": 0.4, "1w": 0.3}
+    PAIRS_TRADING_WEIGHTS = {"1d": 0.5, "3d": 0.3, "1w": 0.2}
     PAIRS_TRADING_TOP_N = 5
     PAIRS_TRADING_MIN_SPREAD = 0.01
     PAIRS_TRADING_MAX_SPREAD = 0.50
@@ -89,7 +89,7 @@ def parse_weights(weights_str: Optional[str]) -> Dict[str, float]:
     """Parse weights string into dictionary.
     
     Args:
-        weights_str: Weights in format '1d:0.3,3d:0.4,1w:0.3'
+        weights_str: Weights in format '1d:0.5,3d:0.3,1w:0.2'
         
     Returns:
         Dictionary with weights, normalized to sum to 1.0
@@ -193,7 +193,7 @@ def parse_args():
         "--weights",
         type=str,
         default=None,
-        help="Weights for timeframes in format '1d:0.3,3d:0.4,1w:0.3' (default: from config)",
+        help="Weights for timeframes in format '1d:0.5,3d:0.3,1w:0.2' (default: from config)",
     )
     parser.add_argument(
         "--min-spread",

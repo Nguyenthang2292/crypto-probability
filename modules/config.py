@@ -228,9 +228,9 @@ DEEP_GRADIENT_CLIP_VAL = 0.5  # Gradient clipping value (None to disable)
 
 # Performance analysis weights
 PAIRS_TRADING_WEIGHTS = {
-    '1d': 0.3,   # Trọng số cho 1 ngày (24 candles)
-    '3d': 0.4,   # Trọng số cho 3 ngày (72 candles)
-    '1w': 0.3    # Trọng số cho 1 tuần (168 candles)
+    '1d': 0.5,   # Trọng số cho 1 ngày (24 candles)
+    '3d': 0.3,   # Trọng số cho 3 ngày (72 candles)
+    '1w': 0.2    # Trọng số cho 1 tuần (168 candles)
 }
 
 # Performance analysis settings

@@ -20,7 +20,7 @@ try:
     from modules.common.utils import color_text, normalize_symbol, timeframe_to_minutes
     from modules.common.ProgressBar import ProgressBar
 except ImportError:
-    PAIRS_TRADING_WEIGHTS = {'1d': 0.3, '3d': 0.4, '1w': 0.3}
+    PAIRS_TRADING_WEIGHTS = {'1d': 0.5, '3d': 0.3, '1w': 0.2}
     PAIRS_TRADING_TOP_N = 5
     PAIRS_TRADING_MIN_CANDLES = 168
     PAIRS_TRADING_TIMEFRAME = "1h"
@@ -66,7 +66,7 @@ class PerformanceAnalyzer:
 
         Args:
             weights: Dictionary with weights for '1d', '3d', '1w' timeframes.
-                     Default: {'1d': 0.3, '3d': 0.4, '1w': 0.3}
+                     Default: {'1d': 0.5, '3d': 0.3, '1w': 0.2}
             min_candles: Minimum number of candles required for analysis (default: 168)
             timeframe: Timeframe for OHLCV data (default: '1h')
             limit: Number of candles to fetch (default: 200)
