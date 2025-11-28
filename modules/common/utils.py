@@ -7,6 +7,7 @@ import sys
 import io
 import os
 import pandas as pd
+from typing import Optional
 from colorama import Fore, Style
 from modules.config import DEFAULT_QUOTE
 
@@ -113,6 +114,29 @@ def normalize_symbol_key(symbol: str) -> str:
 
 
 # ============================================================================
+# DATA UTILITIES
+# ============================================================================
+
+def dataframe_to_close_series(df: Optional[pd.DataFrame]) -> Optional[pd.Series]:
+    """
+    Converts a fetched OHLCV DataFrame into a pandas Series of closing prices indexed by timestamp.
+
+    Args:
+        df: OHLCV DataFrame with columns ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+
+    Returns:
+        pandas Series of closing prices indexed by timestamp, or None if input is invalid
+    """
+    if df is None or df.empty:
+        return None
+    if "timestamp" not in df.columns or "close" not in df.columns:
+        return None
+    series = df.set_index("timestamp")["close"].copy()
+    series.name = "close"
+    return series
+
+
+# ============================================================================
 # TEXT FORMATTING UTILITIES
 # ============================================================================
 
@@ -162,55 +186,55 @@ def format_price(value: float) -> str:
 # ============================================================================
 
 def log_data(message: str) -> None:
-    """Print [DATA] message with cyan color."""
-    print(color_text(f"[DATA] {message}", Fore.CYAN))
+    """Print message with cyan color."""
+    print(color_text(message, Fore.CYAN))
 
 
 def log_info(message: str) -> None:
-    """Print [INFO] message with blue color."""
-    print(color_text(f"[INFO] {message}", Fore.BLUE))
+    """Print message with blue color."""
+    print(color_text(message, Fore.BLUE))
 
 
 def log_success(message: str) -> None:
-    """Print [SUCCESS] message with green color."""
-    print(color_text(f"[SUCCESS] {message}", Fore.GREEN))
+    """Print message with green color."""
+    print(color_text(message, Fore.GREEN))
 
 
 def log_error(message: str) -> None:
-    """Print [ERROR] message with red color and bright style."""
-    print(color_text(f"[ERROR] {message}", Fore.RED, Style.BRIGHT))
+    """Print message with red color and bright style."""
+    print(color_text(message, Fore.RED, Style.BRIGHT))
 
 
 def log_warn(message: str) -> None:
-    """Print [WARN] message with yellow color."""
-    print(color_text(f"[WARN] {message}", Fore.YELLOW))
+    """Print message with yellow color."""
+    print(color_text(message, Fore.YELLOW))
 
 
 def log_debug(message: str) -> None:
-    """Print [DEBUG] message with white color (dimmed)."""
-    print(color_text(f"[DEBUG] {message}", Fore.WHITE))
+    """Print message with white color (dimmed)."""
+    print(color_text(message, Fore.WHITE))
 
 
 def log_model(message: str) -> None:
-    """Print [MODEL] message with magenta color."""
-    print(color_text(f"[MODEL] {message}", Fore.MAGENTA))
+    """Print message with magenta color."""
+    print(color_text(message, Fore.MAGENTA))
 
 
 def log_analysis(message: str) -> None:
-    """Print [ANALYSIS] message with magenta color."""
-    print(color_text(f"[ANALYSIS] {message}", Fore.MAGENTA))
+    """Print message with magenta color."""
+    print(color_text(message, Fore.MAGENTA))
 
 
 def log_exchange(message: str) -> None:
-    """Print [EXCHANGE] message with cyan color (for exchange-related operations)."""
-    print(color_text(f"[EXCHANGE] {message}", Fore.CYAN))
+    """Print message with cyan color (for exchange-related operations)."""
+    print(color_text(message, Fore.CYAN))
 
 
 def log_system(message: str) -> None:
-    """Print [SYSTEM] message with white color (for system-level messages)."""
-    print(color_text(f"[SYSTEM] {message}", Fore.WHITE))
+    """Print message with white color (for system-level messages)."""
+    print(color_text(message, Fore.WHITE))
 
 
 def log_progress(message: str) -> None:
-    """Print [PROGRESS] message with yellow color (for progress updates)."""
-    print(color_text(f"[PROGRESS] {message}", Fore.YELLOW))
+    """Print message with yellow color (for progress updates)."""
+    print(color_text(message, Fore.YELLOW))

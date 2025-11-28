@@ -11,10 +11,32 @@ from typing import Dict, Optional, Tuple
 from colorama import Fore, Style
 
 try:
-    from modules.common.utils import color_text
+    from modules.common.utils import (
+        color_text,
+        log_info,
+        log_success,
+        log_error,
+        log_warn,
+        log_data,
+    )
 except ImportError:
     def color_text(text, color=None, style=None):
         return text
+    
+    def log_info(message: str) -> None:
+        print(f"[INFO] {message}")
+    
+    def log_success(message: str) -> None:
+        print(f"[SUCCESS] {message}")
+    
+    def log_error(message: str) -> None:
+        print(f"[ERROR] {message}")
+    
+    def log_warn(message: str) -> None:
+        print(f"[WARN] {message}")
+    
+    def log_data(message: str) -> None:
+        print(f"[DATA] {message}")
 
 try:
     from modules.config import (
@@ -39,9 +61,9 @@ except ImportError:
 
 def prompt_interactive_mode() -> Dict[str, Optional[str]]:
     """Interactive launcher for selecting analysis mode and symbol source."""
-    print(color_text("\n" + "=" * 60, Fore.CYAN, Style.BRIGHT))
-    print(color_text("Pairs Trading Analysis - Interactive Launcher", Fore.CYAN, Style.BRIGHT))
-    print(color_text("=" * 60, Fore.CYAN, Style.BRIGHT))
+    log_data("=" * 60)
+    log_info("Pairs Trading Analysis - Interactive Launcher")
+    log_data("=" * 60)
     print("1) Auto mode  - analyze entire market to surface opportunities")
     print("2) Manual mode - focus on specific symbols you provide")
     print("3) Exit")
@@ -50,10 +72,10 @@ def prompt_interactive_mode() -> Dict[str, Optional[str]]:
         choice = input(color_text("\nSelect option [1-3]: ", Fore.YELLOW)).strip() or "1"
         if choice in {"1", "2", "3"}:
             break
-        print(color_text("Invalid selection. Please enter 1, 2, or 3.", Fore.RED))
+        log_error("Invalid selection. Please enter 1, 2, or 3.")
 
     if choice == "3":
-        print(color_text("\nExiting...", Fore.YELLOW))
+        log_warn("Exiting...")
         sys.exit(0)
 
     manual_symbols = None
@@ -85,7 +107,7 @@ def prompt_weight_preset_selection(current_preset: Optional[str]) -> str:
     if default_choice is None:
         default_choice = "1"
 
-    print(color_text("\nSelect weight preset for calculating performance score for pairs trading:", Fore.CYAN, Style.BRIGHT))
+    log_info("Select weight preset for calculating performance score for pairs trading:")
     for idx, (key, weights) in enumerate(presets, start=1):
         weights_desc = f"1d={weights['1d']:.2f}, 3d={weights['3d']:.2f}, 1w={weights['1w']:.2f}"
         highlight = Style.BRIGHT if key == current_preset else Style.NORMAL
@@ -108,15 +130,9 @@ def prompt_weight_preset_selection(current_preset: Optional[str]) -> str:
         ).strip() or default_choice
         if user_choice in choice_map:
             selected = choice_map[user_choice]
-            print(
-                color_text(
-                    f"Using {selected.capitalize()} preset",
-                    Fore.GREEN,
-                    Style.BRIGHT,
-                )
-            )
+            log_success(f"Using {selected.capitalize()} preset")
             return selected
-        print(color_text("Invalid selection. Please try again.", Fore.RED))
+        log_error("Invalid selection. Please try again.")
 
 
 def prompt_kalman_preset_selection(
@@ -129,13 +145,7 @@ def prompt_kalman_preset_selection(
         return current_delta, current_obs_cov, None
 
     default_choice = "1"
-    print(
-        color_text(
-            "\nSelect Kalman filter profile for hedge ratio:",
-            Fore.CYAN,
-            Style.BRIGHT,
-        )
-    )
+    log_info("Select Kalman filter profile for hedge ratio:")
     for idx, (key, data) in enumerate(presets, start=1):
         desc = data.get("description", "")
         delta = data.get("delta")
@@ -159,15 +169,9 @@ def prompt_kalman_preset_selection(
             key, data = choice_map[user_choice]
             delta = float(data.get("delta", current_delta))
             obs_cov = float(data.get("obs_cov", current_obs_cov))
-            print(
-                color_text(
-                    f"Using {key} profile (delta={delta:.2e}, obs_cov={obs_cov:.2f})",
-                    Fore.GREEN,
-                    Style.BRIGHT,
-                )
-            )
+            log_success(f"Using {key} profile (delta={delta:.2e}, obs_cov={obs_cov:.2f})")
             return delta, obs_cov, key
-        print(color_text("Invalid selection. Please try again.", Fore.RED))
+        log_error("Invalid selection. Please try again.")
 
 
 def prompt_opportunity_preset_selection(
@@ -186,7 +190,7 @@ def prompt_opportunity_preset_selection(
     if default_choice is None:
         default_choice = "1"
 
-    print(color_text("\nSelect opportunity scoring profile:", Fore.CYAN, Style.BRIGHT))
+    log_info("Select opportunity scoring profile:")
     for idx, (key, data) in enumerate(presets, start=1):
         desc = data.get("description", "")
         print(
@@ -207,15 +211,9 @@ def prompt_opportunity_preset_selection(
         ).strip() or default_choice
         if selection in choice_map:
             chosen = choice_map[selection]
-            print(
-                color_text(
-                    f"Using {chosen} scoring profile",
-                    Fore.GREEN,
-                    Style.BRIGHT,
-                )
-            )
+            log_success(f"Using {chosen} scoring profile")
             return chosen
-        print(color_text("Invalid selection. Please try again.", Fore.RED))
+        log_error("Invalid selection. Please try again.")
 
 
 def prompt_target_pairs(default_count: int) -> int:
@@ -242,9 +240,9 @@ def prompt_target_pairs(default_count: int) -> int:
             count = int(user_input)
             if count > 0:
                 return count
-            print(color_text("Please enter a positive number.", Fore.RED))
+            log_error("Please enter a positive number.")
         except ValueError:
-            print(color_text("Invalid input. Please enter a number.", Fore.RED))
+            log_error("Invalid input. Please enter a number.")
 
 
 def prompt_candidate_depth(default_depth: int) -> int:
@@ -271,7 +269,7 @@ def prompt_candidate_depth(default_depth: int) -> int:
             depth = int(user_input)
             if depth > 0:
                 return depth
-            print(color_text("Please enter a positive number.", Fore.RED))
+            log_error("Please enter a positive number.")
         except ValueError:
-            print(color_text("Invalid input. Please enter a number.", Fore.RED))
+            log_error("Invalid input. Please enter a number.")
 

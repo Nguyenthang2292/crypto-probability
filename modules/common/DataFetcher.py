@@ -4,9 +4,19 @@ Data fetcher for retrieving market data from exchanges.
 
 import pandas as pd
 from typing import Dict, Tuple, Optional, List
-from colorama import Fore, Style
 
-from modules.common.utils import normalize_symbol, color_text, timeframe_to_minutes
+from modules.common.utils import (
+    normalize_symbol,
+    timeframe_to_minutes,
+    dataframe_to_close_series,
+    log_exchange,
+    log_error,
+    log_warn,
+    log_success,
+    log_debug,
+    log_info,
+    log_data,
+)
 from modules.common.ProgressBar import ProgressBar
 from modules.common.ExchangeManager import ExchangeManager
 
@@ -33,7 +43,7 @@ class DataFetcher:
         if not symbols:
             return
 
-        print(color_text("Fetching current prices from Binance...", Fore.CYAN))
+        log_exchange("Fetching current prices from Binance...")
         progress = ProgressBar(len(symbols), "Price Fetch")
 
         try:
@@ -42,7 +52,7 @@ class DataFetcher:
                 self.exchange_manager.authenticated.connect_to_binance_with_credentials()
             )
         except ValueError as e:
-            print(color_text(f"Error: {e}", Fore.RED))
+            log_error(f"Error: {e}")
             return
 
         fetched_count = 0
@@ -50,11 +60,7 @@ class DataFetcher:
 
         for symbol in symbols:
             if self.should_stop():
-                print(
-                    color_text(
-                        "Price fetch aborted due to shutdown signal.", Fore.YELLOW
-                    )
-                )
+                log_warn("Price fetch aborted due to shutdown signal.")
                 break
             normalized_symbol = normalize_symbol(symbol)
             try:
@@ -65,45 +71,25 @@ class DataFetcher:
                 if ticker and "last" in ticker:
                     self.market_prices[symbol] = ticker["last"]
                     fetched_count += 1
-                    print(
-                        color_text(
-                            f"  [BINANCE] {normalized_symbol}: {ticker['last']:.8f}",
-                            Fore.GREEN,
-                        )
-                    )
+                    log_exchange(f"[BINANCE] {normalized_symbol}: {ticker['last']:.8f}")
                 else:
                     failed_symbols.append(symbol)
-                    print(
-                        color_text(
-                            f"  {normalized_symbol}: No price data available",
-                            Fore.YELLOW,
-                        )
-                    )
+                    log_warn(f"{normalized_symbol}: No price data available")
             except Exception as e:
                 failed_symbols.append(symbol)
-                print(
-                    color_text(
-                        f"  Error fetching {normalized_symbol}: {e}", Fore.YELLOW
-                    )
-                )
+                log_error(f"Error fetching {normalized_symbol}: {e}")
             finally:
                 progress.update()
         progress.finish()
 
         if failed_symbols:
-            print(
-                color_text(
-                    f"\nWarning: Could not fetch prices for {len(failed_symbols)} symbol(s): {', '.join(failed_symbols)}",
-                    Fore.YELLOW,
-                )
+            log_warn(
+                f"Warning: Could not fetch prices for {len(failed_symbols)} symbol(s): {', '.join(failed_symbols)}"
             )
 
         if fetched_count > 0:
-            print(
-                color_text(
-                    f"\nSuccessfully fetched prices for {fetched_count}/{len(symbols)} symbols",
-                    Fore.GREEN,
-                )
+            log_success(
+                f"Successfully fetched prices for {fetched_count}/{len(symbols)} symbols"
             )
 
     def fetch_binance_futures_positions(
@@ -322,14 +308,14 @@ class DataFetcher:
     @staticmethod
     def _debug_position(position: Dict, symbol: str, contracts: float):
         info = position.get("info", {})
-        print(f"\n[DEBUG] Position data for {symbol}:")
-        print(f"  contracts: {contracts}")
-        print(f"  positionSide: {position.get('positionSide')}")
-        print(f"  side: {position.get('side')}")
-        print(
+        log_debug(f"Position data for {symbol}:")
+        log_debug(f"  contracts: {contracts}")
+        log_debug(f"  positionSide: {position.get('positionSide')}")
+        log_debug(f"  side: {position.get('side')}")
+        log_debug(
             f"  info.positionSide: {info.get('positionSide', 'N/A') if isinstance(info, dict) else 'N/A'}"
         )
-        print(
+        log_debug(
             f"  info.positionAmt: {info.get('positionAmt', 'N/A') if isinstance(info, dict) else 'N/A'}"
         )
 
@@ -358,7 +344,7 @@ class DataFetcher:
                 self.exchange_manager.authenticated.connect_to_binance_with_credentials()
             )
         except ValueError as exc:
-            print(color_text(f"Unable to list hedge candidates: {exc}", Fore.RED))
+            log_error(f"Unable to list hedge candidates: {exc}")
             return []
 
         try:
@@ -366,7 +352,7 @@ class DataFetcher:
                 exchange.load_markets
             )
         except Exception as exc:
-            print(color_text(f"Failed to load Binance markets: {exc}", Fore.RED))
+            log_error(f"Failed to load Binance markets: {exc}")
             return []
 
         progress = ProgressBar(len(markets), progress_label)
@@ -374,9 +360,7 @@ class DataFetcher:
 
         for market in markets.values():
             if self.should_stop():
-                print(
-                    color_text("Symbol discovery aborted due to shutdown.", Fore.YELLOW)
-                )
+                log_warn("Symbol discovery aborted due to shutdown.")
                 break
             if not market.get("contract"):
                 progress.update()
@@ -413,26 +397,18 @@ class DataFetcher:
             candidates = candidates[:max_candidates]
 
         symbol_list = [symbol for symbol, _ in candidates]
-        print(
-            color_text(
-                f"Discovered {len(symbol_list)} futures symbols from Binance.",
-                Fore.CYAN,
-            )
-        )
+        log_exchange(f"Discovered {len(symbol_list)} futures symbols from Binance.")
         return symbol_list
 
     @staticmethod
     def dataframe_to_close_series(df: Optional[pd.DataFrame]) -> Optional[pd.Series]:
         """
         Converts a fetched OHLCV DataFrame into a pandas Series of closing prices indexed by timestamp.
+        
+        This is a wrapper method for backward compatibility. The actual implementation
+        is in modules.common.utils.dataframe_to_close_series().
         """
-        if df is None or df.empty:
-            return None
-        if "timestamp" not in df.columns or "close" not in df.columns:
-            return None
-        series = df.set_index("timestamp")["close"].copy()
-        series.name = "close"
-        return series
+        return dataframe_to_close_series(df)
 
     def fetch_ohlcv_with_fallback_exchange(
         self,
@@ -476,18 +452,12 @@ class DataFetcher:
         fallback = None
         if check_freshness:
             freshness_minutes = max(timeframe_to_minutes(timeframe) * 1.5, 5)
-            print(
-                color_text(
-                    f"Fetching {limit} candles for {normalized_symbol} ({timeframe})...",
-                    Fore.CYAN,
-                    Style.BRIGHT,
-                )
-            )
+            log_data(f"Fetching {limit} candles for {normalized_symbol} ({timeframe})...")
 
         last_error = None
         for exchange_id in exchange_list:
             if self.should_stop():
-                print(color_text("OHLCV fetch cancelled by shutdown.", Fore.YELLOW))
+                log_warn("OHLCV fetch cancelled by shutdown.")
                 return None, None
 
             exchange_id = exchange_id.strip()
@@ -502,12 +472,7 @@ class DataFetcher:
             except Exception as exc:
                 last_error = exc
                 if check_freshness:
-                    print(
-                        color_text(
-                            f"[{exchange_id.upper()}] Error connecting: {exc}",
-                            Fore.YELLOW,
-                        )
-                    )
+                    log_warn(f"[{exchange_id.upper()}] Error connecting: {exc}")
                 continue
 
             try:
@@ -521,22 +486,13 @@ class DataFetcher:
             except Exception as exc:
                 last_error = exc
                 if check_freshness:
-                    print(
-                        color_text(
-                            f"[{exchange_id.upper()}] Error fetching data: {exc}",
-                            Fore.RED,
-                        )
-                    )
+                    log_error(f"[{exchange_id.upper()}] Error fetching data: {exc}")
                 continue
 
             if not ohlcv:
                 last_error = ValueError(f"{exchange_id}: empty OHLCV")
                 if check_freshness:
-                    print(
-                        color_text(
-                            f"[{exchange_id.upper()}] No data retrieved.", Fore.YELLOW
-                        )
-                    )
+                    log_warn(f"[{exchange_id.upper()}] No data retrieved.")
                 continue
 
             df = pd.DataFrame(
@@ -545,11 +501,7 @@ class DataFetcher:
             if df.empty:
                 last_error = ValueError(f"{exchange_id}: OHLCV dataframe empty")
                 if check_freshness:
-                    print(
-                        color_text(
-                            f"[{exchange_id.upper()}] No data retrieved.", Fore.YELLOW
-                        )
-                    )
+                    log_warn(f"[{exchange_id.upper()}] No data retrieved.")
                 continue
 
             # Convert timestamp and ensure ordering
@@ -562,32 +514,17 @@ class DataFetcher:
                 age_minutes = (now - last_ts).total_seconds() / 60.0
 
                 if age_minutes <= freshness_minutes:
-                    print(
-                        color_text(
-                            f"[{exchange_id.upper()}] Data age {age_minutes:.1f}m (fresh).",
-                            Fore.GREEN,
-                        )
-                    )
+                    log_success(f"[{exchange_id.upper()}] Data age {age_minutes:.1f}m (fresh).")
                     self._ohlcv_dataframe_cache[cache_key] = (df.copy(), exchange_id)
                     # When check_freshness=True, always return tuple
                     return df, exchange_id
 
-                print(
-                    color_text(
-                        f"[{exchange_id.upper()}] Data age {age_minutes:.1f}m (stale). Trying next exchange...",
-                        Fore.YELLOW,
-                    )
-                )
+                log_warn(f"[{exchange_id.upper()}] Data age {age_minutes:.1f}m (stale). Trying next exchange...")
                 fallback = (df, exchange_id)
                 continue
 
             # No freshness check - use first successful result
-            print(
-                color_text(
-                    f"  [OHLCV] {normalized_symbol} loaded from {exchange_id} ({len(df)} bars)",
-                    Fore.GREEN,
-                )
-            )
+            log_success(f"[OHLCV] {normalized_symbol} loaded from {exchange_id} ({len(df)} bars)")
 
             self._ohlcv_dataframe_cache[cache_key] = (df.copy(), exchange_id)
             return df, exchange_id
@@ -595,20 +532,11 @@ class DataFetcher:
         # Handle fallback for stale data
         if check_freshness and fallback:
             df, exchange_id = fallback
-            print(
-                color_text(
-                    f"Using latest available data from {exchange_id.upper()} despite staleness.",
-                    Fore.MAGENTA,
-                )
-            )
+            log_info(f"Using latest available data from {exchange_id.upper()} despite staleness.")
             self._ohlcv_dataframe_cache[cache_key] = (df.copy(), exchange_id)
             # When check_freshness=True, always return tuple
             return df, exchange_id
 
         # Failed to fetch
-        print(
-            color_text(
-                f"Failed to fetch OHLCV for {normalized_symbol}: {last_error}", Fore.RED
-            )
-        )
+        log_error(f"Failed to fetch OHLCV for {normalized_symbol}: {last_error}")
         return None, None

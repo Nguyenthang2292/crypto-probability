@@ -4,7 +4,10 @@ Pairs trading analyzer for identifying and validating pairs trading opportunitie
 
 import numpy as np
 import pandas as pd
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from modules.common.DataFetcher import DataFetcher
 
 try:
     from modules.config import (
@@ -189,6 +192,8 @@ except ImportError:
 
 from modules.pairs_trading.core.pair_metrics_computer import PairMetricsComputer
 from modules.pairs_trading.core.opportunity_scorer import OpportunityScorer
+from modules.pairs_trading.utils.pairs_validator import validate_pairs as validate_pairs_util
+from modules.pairs_trading.metrics import calculate_correlation as calculate_correlation_metric
 
 
 def _get_all_pair_columns() -> list:
@@ -296,7 +301,60 @@ class PairsTradingAnalyzer:
             max_drawdown_threshold: Maximum drawdown threshold (None to disable)
             min_quantitative_score: Minimum quantitative score (0-100, None to disable)
             strategy: Trading strategy ('reversion' or 'momentum')
+            
+        Raises:
+            ValueError: If parameter values are invalid (e.g., min_spread > max_spread)
         """
+        # Validate parameters
+        if min_spread < 0:
+            raise ValueError(f"min_spread must be non-negative, got {min_spread}")
+        if max_spread <= 0:
+            raise ValueError(f"max_spread must be positive, got {max_spread}")
+        if min_spread > max_spread:
+            raise ValueError(
+                f"min_spread ({min_spread}) must be <= max_spread ({max_spread})"
+            )
+        if not (-1 <= min_correlation <= 1):
+            raise ValueError(
+                f"min_correlation must be in [-1, 1], got {min_correlation}"
+            )
+        if not (-1 <= max_correlation <= 1):
+            raise ValueError(
+                f"max_correlation must be in [-1, 1], got {max_correlation}"
+            )
+        if min_correlation > max_correlation:
+            raise ValueError(
+                f"min_correlation ({min_correlation}) must be <= max_correlation ({max_correlation})"
+            )
+        if correlation_min_points < 2:
+            raise ValueError(
+                f"correlation_min_points must be >= 2, got {correlation_min_points}"
+            )
+        if max_half_life <= 0:
+            raise ValueError(f"max_half_life must be positive, got {max_half_life}")
+        if not (0 < hurst_threshold <= 1):
+            raise ValueError(
+                f"hurst_threshold must be in (0, 1], got {hurst_threshold}"
+            )
+        if min_spread_sharpe is not None and (np.isnan(min_spread_sharpe) or np.isinf(min_spread_sharpe)):
+            raise ValueError(f"min_spread_sharpe must be finite, got {min_spread_sharpe}")
+        if max_drawdown_threshold is not None:
+            if max_drawdown_threshold <= 0 or max_drawdown_threshold > 1:
+                raise ValueError(
+                    f"max_drawdown_threshold must be in (0, 1], got {max_drawdown_threshold}"
+                )
+        if min_quantitative_score is not None:
+            if not (0 <= min_quantitative_score <= 100):
+                raise ValueError(
+                    f"min_quantitative_score must be in [0, 100], got {min_quantitative_score}"
+                )
+        if kalman_delta <= 0 or kalman_delta >= 1:
+            raise ValueError(f"kalman_delta must be in (0, 1), got {kalman_delta}")
+        if kalman_obs_cov <= 0:
+            raise ValueError(f"kalman_obs_cov must be positive, got {kalman_obs_cov}")
+        if strategy not in ["reversion", "momentum"]:
+            raise ValueError(f"strategy must be 'reversion' or 'momentum', got {strategy}")
+        
         self.min_spread = min_spread
         self.max_spread = max_spread
         self.min_correlation = min_correlation
@@ -350,7 +408,7 @@ class PairsTradingAnalyzer:
         self,
         symbol1: str,
         symbol2: str,
-        data_fetcher,
+        data_fetcher: Optional[Any],
         timeframe: str = PAIRS_TRADING_TIMEFRAME,
         limit: int = PAIRS_TRADING_LIMIT,
     ) -> Optional[pd.DataFrame]:
@@ -372,7 +430,14 @@ class PairsTradingAnalyzer:
             df2, _ = data_fetcher.fetch_ohlcv_with_fallback_exchange(
                 symbol2, limit=limit, timeframe=timeframe, check_freshness=False
             )
-        except Exception:
+        except (AttributeError, TypeError, ValueError, KeyError) as e:
+            # Specific exceptions for data fetching errors
+            log_warn(f"Failed to fetch data for {symbol1} or {symbol2}: {e}")
+            self._price_cache[cache_key] = None
+            return None
+        except Exception as e:
+            # Catch-all for unexpected errors
+            log_warn(f"Unexpected error fetching data for {symbol1} or {symbol2}: {e}")
             self._price_cache[cache_key] = None
             return None
 
@@ -395,12 +460,37 @@ class PairsTradingAnalyzer:
             self._price_cache[cache_key] = None
             return None
 
+        # Check for duplicate timestamps before setting index
+        if df1["timestamp"].duplicated().any():
+            log_warn(f"Duplicate timestamps found for {symbol1}, using first occurrence")
+            df1 = df1.drop_duplicates(subset=["timestamp"], keep="first")
+        if df2["timestamp"].duplicated().any():
+            log_warn(f"Duplicate timestamps found for {symbol2}, using first occurrence")
+            df2 = df2.drop_duplicates(subset=["timestamp"], keep="first")
+        
         df1 = df1.set_index("timestamp")
         df2 = df2.set_index("timestamp")
+        
+        # Validate close columns contain valid numeric data
+        if df1["close"].isna().all() or df2["close"].isna().all():
+            self._price_cache[cache_key] = None
+            return None
+        
+        # Check for infinite values
+        if np.isinf(df1["close"]).any() or np.isinf(df2["close"]).any():
+            log_warn(f"Infinite values found in price data for {symbol1} or {symbol2}")
+            self._price_cache[cache_key] = None
+            return None
+        
         df_combined = pd.concat(
             [df1[["close"]], df2[["close"]]], axis=1, join="inner"
         )
         df_combined.columns = ["close1", "close2"]
+        
+        # Validate combined DataFrame
+        if df_combined.empty:
+            self._price_cache[cache_key] = None
+            return None
 
         if len(df_combined) < self.correlation_min_points:
             self._price_cache[cache_key] = None
@@ -409,7 +499,7 @@ class PairsTradingAnalyzer:
         self._price_cache[cache_key] = df_combined
         return df_combined
 
-    def _get_symbol_adx(self, symbol: str, data_fetcher) -> Optional[float]:
+    def _get_symbol_adx(self, symbol: str, data_fetcher: Optional[Any]) -> Optional[float]:
         """
         Retrieve cached ADX for symbol, computing if necessary.
         """
@@ -426,7 +516,13 @@ class PairsTradingAnalyzer:
                 timeframe=PAIRS_TRADING_TIMEFRAME,
                 check_freshness=False,
             )
-        except Exception:
+        except (AttributeError, TypeError, ValueError, KeyError) as e:
+            log_warn(f"Failed to fetch ADX data for {symbol}: {e}")
+            self._adx_cache[symbol] = None
+            return None
+        except Exception as e:
+            log_warn(f"Unexpected error fetching ADX data for {symbol}: {e}")
+            self._adx_cache[symbol] = None
             return None
 
         if (
@@ -445,12 +541,14 @@ class PairsTradingAnalyzer:
         self,
         symbol1: str,
         symbol2: str,
-        data_fetcher,
+        data_fetcher: Optional[Any],
         timeframe: str = PAIRS_TRADING_TIMEFRAME,
         limit: int = PAIRS_TRADING_LIMIT,
     ) -> Optional[float]:
         """
         Calculate correlation between two symbols based on returns.
+
+        This method wraps the metric function with caching and data fetching logic.
 
         Args:
             symbol1: First trading symbol
@@ -467,6 +565,7 @@ class PairsTradingAnalyzer:
         if cache_key in self._correlation_cache:
             return self._correlation_cache[cache_key]
 
+        # Fetch and align prices
         df_combined = self._fetch_aligned_prices(
             symbol1, symbol2, data_fetcher, timeframe=timeframe, limit=limit
         )
@@ -474,31 +573,28 @@ class PairsTradingAnalyzer:
         if df_combined is None:
             return None
 
-        try:
-            returns = df_combined.pct_change().dropna()
+        # Extract price series
+        price1 = df_combined["close1"]
+        price2 = df_combined["close2"]
 
-            if len(returns) < self.correlation_min_points:
-                return None
+        # Calculate correlation using metric function
+        correlation = calculate_correlation_metric(
+            price1=price1,
+            price2=price2,
+            min_points=self.correlation_min_points,
+        )
 
-            # Calculate correlation
-            correlation = returns["close1"].corr(returns["close2"])
+        # Cache result if valid
+        if correlation is not None:
+            self._correlation_cache[cache_key] = correlation
 
-            if pd.isna(correlation):
-                return None
-
-            # Cache result
-            self._correlation_cache[cache_key] = float(correlation)
-
-            return float(correlation)
-
-        except Exception:
-            return None
+        return correlation
 
     def _compute_pair_metrics(
         self,
         symbol1: str,
         symbol2: str,
-        data_fetcher,
+        data_fetcher: Optional[Any],
     ) -> Dict[str, Optional[float]]:
         """Compute Phase 1 quantitative metrics for a pair."""
         aligned_prices = self._fetch_aligned_prices(
@@ -529,18 +625,36 @@ class PairsTradingAnalyzer:
 
         Returns:
             Spread as percentage (positive value)
+            
+        Raises:
+            ValueError: If scores are NaN or Inf
         """
+        # Validate inputs
+        if pd.isna(long_score) or pd.isna(short_score):
+            raise ValueError(
+                f"Invalid scores: long_score={long_score}, short_score={short_score}"
+            )
+        if np.isinf(long_score) or np.isinf(short_score):
+            raise ValueError(
+                f"Infinite scores: long_score={long_score}, short_score={short_score}"
+            )
+        
         # Spread = difference between short score and long score
         # Since long_score is negative and short_score is positive,
         # spread = short_score - long_score (which is positive)
         spread = short_score - long_score
+        
+        # Validate result
+        if np.isnan(spread) or np.isinf(spread):
+            raise ValueError(f"Invalid spread calculation result: {spread}")
+        
         return abs(spread)  # Ensure positive
 
     def analyze_pairs_opportunity(
         self,
         best_performers: pd.DataFrame,
         worst_performers: pd.DataFrame,
-        data_fetcher=None,
+        data_fetcher: Optional[Any] = None,
         verbose: bool = True,
     ) -> pd.DataFrame:
         """
@@ -558,15 +672,30 @@ class PairsTradingAnalyzer:
         """
         empty_df = pd.DataFrame(columns=_get_all_pair_columns())
         
-        if best_performers is None or best_performers.empty:
+        # Validate inputs
+        if best_performers is None or worst_performers is None:
+            if verbose:
+                log_warn("None DataFrame provided for pairs analysis.")
+            return empty_df
+        
+        if best_performers.empty:
             if verbose:
                 log_warn("No best performers provided for pairs analysis.")
             return empty_df
 
-        if worst_performers is None or worst_performers.empty:
+        if worst_performers.empty:
             if verbose:
                 log_warn("No worst performers provided for pairs analysis.")
             return empty_df
+        
+        # Validate required columns
+        required_columns = {"symbol", "score"}
+        if not required_columns.issubset(best_performers.columns):
+            missing = required_columns - set(best_performers.columns)
+            raise ValueError(f"best_performers missing required columns: {missing}")
+        if not required_columns.issubset(worst_performers.columns):
+            missing = required_columns - set(worst_performers.columns)
+            raise ValueError(f"worst_performers missing required columns: {missing}")
 
         pairs = []
 
@@ -582,12 +711,36 @@ class PairsTradingAnalyzer:
             progress = ProgressBar(total_combinations, "Pairs Analysis")
 
         for _, worst_row in worst_performers.iterrows():
-            long_symbol = worst_row['symbol']
-            long_score = worst_row['score']
+            long_symbol = worst_row.get('symbol')
+            long_score = worst_row.get('score')
+
+            # Validate row data
+            if pd.isna(long_symbol) or long_symbol is None:
+                if progress:
+                    progress.update()
+                continue
+            if pd.isna(long_score) or np.isinf(long_score):
+                if verbose:
+                    log_warn(f"Invalid long_score for {long_symbol}: {long_score}")
+                if progress:
+                    progress.update()
+                continue
 
             for _, best_row in best_performers.iterrows():
-                short_symbol = best_row['symbol']
-                short_score = best_row['score']
+                short_symbol = best_row.get('symbol')
+                short_score = best_row.get('score')
+
+                # Validate row data
+                if pd.isna(short_symbol) or short_symbol is None:
+                    if progress:
+                        progress.update()
+                    continue
+                if pd.isna(short_score) or np.isinf(short_score):
+                    if verbose:
+                        log_warn(f"Invalid short_score for {short_symbol}: {short_score}")
+                    if progress:
+                        progress.update()
+                    continue
 
                 # Skip if same symbol
                 if long_symbol == short_symbol:
@@ -596,7 +749,14 @@ class PairsTradingAnalyzer:
                     continue
 
                 # Calculate spread
-                spread = self.calculate_spread(long_symbol, short_symbol, long_score, short_score)
+                try:
+                    spread = self.calculate_spread(long_symbol, short_symbol, long_score, short_score)
+                except ValueError as e:
+                    if verbose:
+                        log_warn(f"Failed to calculate spread for {long_symbol}/{short_symbol}: {e}")
+                    if progress:
+                        progress.update()
+                    continue
 
                 # Calculate correlation if data_fetcher provided
                 correlation = None
@@ -612,23 +772,37 @@ class PairsTradingAnalyzer:
                     )
 
                 # Calculate opportunity score
-                opportunity_score = self.opportunity_scorer.calculate_opportunity_score(
-                    spread, correlation, quant_metrics
-                )
+                try:
+                    opportunity_score = self.opportunity_scorer.calculate_opportunity_score(
+                        spread, correlation, quant_metrics
+                    )
+                    if pd.isna(opportunity_score) or np.isinf(opportunity_score):
+                        opportunity_score = 0.0
+                except Exception as e:
+                    if verbose:
+                        log_warn(f"Error calculating opportunity_score for {long_symbol}/{short_symbol}: {e}")
+                    opportunity_score = 0.0
                 
                 # Calculate quantitative score
-                quantitative_score = self.opportunity_scorer.calculate_quantitative_score(
-                    quant_metrics
-                )
+                try:
+                    quantitative_score = self.opportunity_scorer.calculate_quantitative_score(
+                        quant_metrics
+                    )
+                    if pd.isna(quantitative_score) or np.isinf(quantitative_score):
+                        quantitative_score = 0.0
+                except Exception as e:
+                    if verbose:
+                        log_warn(f"Error calculating quantitative_score for {long_symbol}/{short_symbol}: {e}")
+                    quantitative_score = 0.0
 
                 # Build pair record
                 pair_record = {
-                    'long_symbol': long_symbol,
-                    'short_symbol': short_symbol,
+                    'long_symbol': str(long_symbol),
+                    'short_symbol': str(short_symbol),
                     'long_score': float(long_score),
                     'short_score': float(short_score),
                     'spread': float(spread),
-                    'correlation': float(correlation) if correlation is not None else None,
+                    'correlation': float(correlation) if correlation is not None and not (pd.isna(correlation) or np.isinf(correlation)) else None,
                     'opportunity_score': float(opportunity_score),
                     'quantitative_score': float(quantitative_score),
                 }
@@ -665,7 +839,7 @@ class PairsTradingAnalyzer:
     def validate_pairs(
         self,
         pairs_df: pd.DataFrame,
-        data_fetcher,
+        data_fetcher: Optional[Any],
         verbose: bool = True,
     ) -> pd.DataFrame:
         """
@@ -678,137 +852,24 @@ class PairsTradingAnalyzer:
 
         Args:
             pairs_df: DataFrame from analyze_pairs_opportunity()
-            data_fetcher: DataFetcher instance for validation
+            data_fetcher: DataFetcher instance for validation (currently unused, reserved for future use)
             verbose: If True, print validation messages
 
         Returns:
             DataFrame with validated pairs only
         """
-        if pairs_df is None or pairs_df.empty:
-            return pd.DataFrame(columns=_get_all_pair_columns())
-
-        if verbose:
-            log_progress(f"Validating {len(pairs_df)} pairs...")
-
-        validated_pairs = []
-
-        progress = None
-        if verbose and ProgressBar:
-            progress = ProgressBar(len(pairs_df), "Validation")
-
-        for _, row in pairs_df.iterrows():
-            long_symbol = row['long_symbol']
-            short_symbol = row['short_symbol']
-            spread = row['spread']
-            correlation = row.get('correlation')
-
-            is_valid = True
-            validation_errors = []
-
-            # Check spread
-            if spread < self.min_spread:
-                is_valid = False
-                validation_errors.append(f"Spread too small ({spread*100:.2f}% < {self.min_spread*100:.2f}%)")
-            elif spread > self.max_spread:
-                is_valid = False
-                validation_errors.append(f"Spread too large ({spread*100:.2f}% > {self.max_spread*100:.2f}%)")
-
-            # Check correlation if available
-            if correlation is not None and not pd.isna(correlation):
-                abs_corr = abs(correlation)
-                if abs_corr < self.min_correlation:
-                    is_valid = False
-                    validation_errors.append(
-                        f"Correlation too low ({abs_corr:.3f} < {self.min_correlation:.3f})"
-                    )
-                elif abs_corr > self.max_correlation:
-                    is_valid = False
-                    validation_errors.append(
-                        f"Correlation too high ({abs_corr:.3f} > {self.max_correlation:.3f})"
-                    )
-
-            # Check quantitative metrics if available
-            # Cointegration requirement
-            if self.require_cointegration:
-                is_cointegrated = row.get('is_cointegrated')
-                # Fall back to Johansen cointegration flag if ADF-based flag is missing
-                if (is_cointegrated is None or pd.isna(is_cointegrated)) and 'is_johansen_cointegrated' in row:
-                    alt_coint = row.get('is_johansen_cointegrated')
-                    if alt_coint is not None and not pd.isna(alt_coint):
-                        is_cointegrated = bool(alt_coint)
-                if is_cointegrated is None or pd.isna(is_cointegrated) or not is_cointegrated:
-                    is_valid = False
-                    validation_errors.append("Not cointegrated (required)")
-
-            # Half-life check
-            half_life = row.get('half_life')
-            if half_life is not None and not pd.isna(half_life):
-                if half_life > self.max_half_life:
-                    is_valid = False
-                    validation_errors.append(
-                        f"Half-life too high ({half_life:.1f} > {self.max_half_life})"
-                    )
-
-            # Hurst exponent check
-            hurst = row.get('hurst_exponent')
-            if hurst is not None and not pd.isna(hurst):
-                if hurst >= self.hurst_threshold:
-                    is_valid = False
-                    validation_errors.append(
-                        f"Hurst exponent too high ({hurst:.3f} >= {self.hurst_threshold}, not mean-reverting)"
-                    )
-
-            # Sharpe ratio check
-            spread_sharpe = row.get('spread_sharpe')
-            if spread_sharpe is not None and not pd.isna(spread_sharpe):
-                if spread_sharpe < self.min_spread_sharpe:
-                    is_valid = False
-                    validation_errors.append(
-                        f"Sharpe ratio too low ({spread_sharpe:.2f} < {self.min_spread_sharpe})"
-                    )
-
-            # Max drawdown check
-            max_dd = row.get('max_drawdown')
-            if max_dd is not None and not pd.isna(max_dd):
-                if abs(max_dd) > self.max_drawdown_threshold:
-                    is_valid = False
-                    validation_errors.append(
-                        f"Max drawdown too high ({abs(max_dd)*100:.2f}% > {self.max_drawdown_threshold*100:.2f}%)"
-                    )
-
-            # Quantitative score check
-            if self.min_quantitative_score is not None:
-                quant_score = row.get('quantitative_score')
-                if quant_score is not None and not pd.isna(quant_score):
-                    if quant_score < self.min_quantitative_score:
-                        is_valid = False
-                        validation_errors.append(
-                            f"Quantitative score too low ({quant_score:.1f} < {self.min_quantitative_score})"
-                        )
-
-            if is_valid:
-                validated_pairs.append(row.to_dict())
-            elif verbose:
-                log_warn(f"Rejected {long_symbol} / {short_symbol}: {', '.join(validation_errors)}")
-
-            if progress:
-                progress.update()
-
-        if progress:
-            progress.finish()
-
-        if not validated_pairs:
-            if verbose:
-                log_warn("No pairs passed validation.")
-            return pd.DataFrame(columns=_get_all_pair_columns())
-
-        df_validated = pd.DataFrame(validated_pairs)
-        # Maintain sort order by opportunity_score
-        df_validated = df_validated.sort_values('opportunity_score', ascending=False).reset_index(
-            drop=True
+        return validate_pairs_util(
+            pairs_df=pairs_df,
+            min_spread=self.min_spread,
+            max_spread=self.max_spread,
+            min_correlation=self.min_correlation,
+            max_correlation=self.max_correlation,
+            require_cointegration=self.require_cointegration,
+            max_half_life=self.max_half_life,
+            hurst_threshold=self.hurst_threshold,
+            min_spread_sharpe=self.min_spread_sharpe,
+            max_drawdown_threshold=self.max_drawdown_threshold,
+            min_quantitative_score=self.min_quantitative_score,
+            data_fetcher=data_fetcher,
+            verbose=verbose,
         )
-
-        if verbose:
-            log_success(f"{len(df_validated)}/{len(pairs_df)} pairs passed validation.")
-
-        return df_validated

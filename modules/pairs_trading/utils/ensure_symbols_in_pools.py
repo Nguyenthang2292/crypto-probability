@@ -18,42 +18,18 @@ def ensure_symbols_in_candidate_pools(
     """
     Ensure target symbols are present in candidate pools based on their score direction.
     
-    This function ensures that user-specified target symbols are included in the
-    appropriate candidate pools (best or worst performers) based on their performance scores.
-    Symbols with positive scores are added to the best performers pool, while symbols
-    with negative scores are added to the worst performers pool.
+    Adds target symbols to appropriate pools: positive scores -> best_df, negative scores -> worst_df.
+    Symbols already in pools are not duplicated. Missing symbols are silently skipped.
     
     Args:
-        performance_df: DataFrame with all performance data containing columns:
-            - symbol: Trading symbol (e.g., 'BTC/USDT')
-            - score: Performance score (positive = good, negative = bad)
-        best_df: DataFrame of best performers (top performers with high scores)
-        worst_df: DataFrame of worst performers (bottom performers with low scores)
-        target_symbols: List of symbols that must be included in candidate pools
+        performance_df: DataFrame with 'symbol' and 'score' columns (all performance data)
+        best_df: DataFrame of best performers (high scores)
+        worst_df: DataFrame of worst performers (low scores)
+        target_symbols: List of symbols to ensure are in pools
         
     Returns:
-        Tuple of (updated_best_df, updated_worst_df) with target symbols added
-        and sorted by score:
-        - best_df: Sorted descending by score (highest first)
-        - worst_df: Sorted ascending by score (lowest first)
-        
-    Example:
-        >>> performance = pd.DataFrame({
-        ...     'symbol': ['BTC/USDT', 'ETH/USDT', 'SOL/USDT'],
-        ...     'score': [0.5, -0.3, 0.2]
-        ... })
-        >>> best = pd.DataFrame({'symbol': ['BTC/USDT'], 'score': [0.5]})
-        >>> worst = pd.DataFrame({'symbol': ['ETH/USDT'], 'score': [-0.3]})
-        >>> best, worst = ensure_symbols_in_candidate_pools(
-        ...     performance, best, worst, ['SOL/USDT']
-        ... )
-        >>> 'SOL/USDT' in best['symbol'].values
-        True
-    
-    Note:
-        - Symbols already in pools are not duplicated
-        - Symbols not found in performance_df are silently skipped
-        - Both returned DataFrames are re-sorted and have reset indices
+        Tuple of (updated_best_df, updated_worst_df), both sorted by score (best descending,
+        worst ascending) with reset indices.
     """
     if not target_symbols:
         return best_df, worst_df
@@ -75,12 +51,20 @@ def ensure_symbols_in_candidate_pools(
         # Add to best pool if score >= 0
         if score >= 0:
             if symbol not in best_symbols:
-                best_df = pd.concat([best_df, row], ignore_index=True)
+                # Avoid FutureWarning: check if best_df is empty before concat
+                if best_df.empty:
+                    best_df = row.copy()
+                else:
+                    best_df = pd.concat([best_df, row], ignore_index=True)
                 best_symbols.add(symbol)
         # Add to worst pool if score < 0
         else:
             if symbol not in worst_symbols:
-                worst_df = pd.concat([worst_df, row], ignore_index=True)
+                # Avoid FutureWarning: check if worst_df is empty before concat
+                if worst_df.empty:
+                    worst_df = row.copy()
+                else:
+                    worst_df = pd.concat([worst_df, row], ignore_index=True)
                 worst_symbols.add(symbol)
 
     # Re-sort pools and reset indices

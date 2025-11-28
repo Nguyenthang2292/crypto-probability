@@ -9,6 +9,9 @@ import time
 import threading
 from typing import Dict, Optional
 
+# Import normalize_symbol from utils (core module, should always be available)
+from modules.common.utils import normalize_symbol
+
 try:
     from modules.config import (
         DEFAULT_EXCHANGE_STRING,
@@ -17,7 +20,6 @@ try:
         DEFAULT_EXCHANGES,
     )
     from modules.config_api import BINANCE_API_KEY, BINANCE_API_SECRET
-    from modules.common.utils import normalize_symbol
 except ImportError:
     DEFAULT_EXCHANGE_STRING = "binance,kraken,kucoin,gate,okx,bybit,mexc,huobi"
     DEFAULT_REQUEST_PAUSE = 0.2
@@ -34,16 +36,6 @@ except ImportError:
     ]
     BINANCE_API_KEY = None
     BINANCE_API_SECRET = None
-
-    def normalize_symbol(user_input: str, quote: str = "USDT") -> str:
-        if not user_input:
-            return f"BTC/{quote}"
-        norm = user_input.strip().upper()
-        if "/" in norm:
-            return norm
-        if norm.endswith(quote):
-            return f"{norm[:-len(quote)]}/{quote}"
-        return f"{norm}/{quote}"
 
 
 class AuthenticatedExchangeManager:

@@ -117,8 +117,56 @@ class OpportunityScorer:
             min_spread_sharpe: Minimum Sharpe ratio threshold
             max_drawdown_threshold: Maximum drawdown threshold
             min_calmar: Minimum Calmar ratio threshold
+            scoring_multipliers: Optional dict to override default scoring multipliers
             strategy: Trading strategy ('reversion' or 'momentum')
+            
+        Raises:
+            ValueError: If parameter values are invalid
         """
+        # Validate parameters
+        if not (-1 <= min_correlation <= 1):
+            raise ValueError(f"min_correlation must be in [-1, 1], got {min_correlation}")
+        if not (-1 <= max_correlation <= 1):
+            raise ValueError(f"max_correlation must be in [-1, 1], got {max_correlation}")
+        if min_correlation > max_correlation:
+            raise ValueError(
+                f"min_correlation ({min_correlation}) must be <= max_correlation ({max_correlation})"
+            )
+        if not (0 < adf_pvalue_threshold <= 1):
+            raise ValueError(
+                f"adf_pvalue_threshold must be in (0, 1], got {adf_pvalue_threshold}"
+            )
+        if max_half_life <= 0:
+            raise ValueError(f"max_half_life must be positive, got {max_half_life}")
+        if not (0 < hurst_threshold <= 1):
+            raise ValueError(f"hurst_threshold must be in (0, 1], got {hurst_threshold}")
+        if np.isnan(min_spread_sharpe) or np.isinf(min_spread_sharpe):
+            raise ValueError(f"min_spread_sharpe must be finite, got {min_spread_sharpe}")
+        if max_drawdown_threshold <= 0 or max_drawdown_threshold > 1:
+            raise ValueError(
+                f"max_drawdown_threshold must be in (0, 1], got {max_drawdown_threshold}"
+            )
+        if np.isnan(min_calmar) or np.isinf(min_calmar) or min_calmar < 0:
+            raise ValueError(f"min_calmar must be finite and non-negative, got {min_calmar}")
+        if strategy not in ["reversion", "momentum"]:
+            raise ValueError(f"strategy must be 'reversion' or 'momentum', got {strategy}")
+        
+        # Validate scoring_multipliers if provided
+        # Note: Some keys like 'description' and 'hedge_ratio_strategy' are metadata, not multipliers
+        if scoring_multipliers is not None:
+            # Keys that are metadata, not numeric multipliers
+            metadata_keys = {'description', 'hedge_ratio_strategy'}
+            
+            for key, value in scoring_multipliers.items():
+                # Skip metadata keys
+                if key in metadata_keys:
+                    continue
+                
+                # Validate numeric multipliers
+                if not isinstance(value, (int, float)):
+                    raise ValueError(f"scoring_multipliers[{key}] must be numeric, got {type(value)}")
+                if np.isnan(value) or np.isinf(value):
+                    raise ValueError(f"scoring_multipliers[{key}] must be finite, got {value}")
         self.min_correlation = min_correlation
         self.max_correlation = max_correlation
         self.adf_pvalue_threshold = adf_pvalue_threshold
@@ -152,13 +200,19 @@ class OpportunityScorer:
             strategy: Strategy to use ('ols', 'kalman', 'best', 'avg'). Defaults to instance strategy.
             
         Returns:
-            Metric value or None if not available
+            Metric value or None if not available or invalid (NaN/Inf)
         """
         if strategy is None:
             strategy = self.hedge_ratio_strategy
         
         ols_val = quant_metrics.get(ols_key)
         kalman_val = quant_metrics.get(kalman_key)
+        
+        # Filter out NaN and Inf values
+        if ols_val is not None and (np.isnan(ols_val) or np.isinf(ols_val)):
+            ols_val = None
+        if kalman_val is not None and (np.isnan(kalman_val) or np.isinf(kalman_val)):
+            kalman_val = None
         
         if strategy == "ols":
             return ols_val
@@ -176,7 +230,11 @@ class OpportunityScorer:
             return kalman_val if kalman_val is not None else ols_val
         elif strategy == "avg":
             if ols_val is not None and kalman_val is not None:
-                return (ols_val + kalman_val) / 2.0
+                avg_val = (ols_val + kalman_val) / 2.0
+                # Validate result
+                if np.isnan(avg_val) or np.isinf(avg_val):
+                    return None
+                return avg_val
             return kalman_val if kalman_val is not None else ols_val
         else:
             # Default: prefer Kalman, fallback to OLS
@@ -199,13 +257,28 @@ class OpportunityScorer:
         - 'avg': Uses average of both when available
         
         Args:
-            spread: Spread between long and short symbols
-            correlation: Correlation coefficient (optional)
+            spread: Spread between long and short symbols (must be >= 0)
+            correlation: Correlation coefficient (optional, must be in [-1, 1] if provided)
             quant_metrics: Quantitative metrics dictionary (optional, includes both OLS and Kalman metrics)
             
         Returns:
-            Opportunity score (higher is better)
+            Opportunity score (higher is better, always >= 0)
+            
+        Raises:
+            ValueError: If spread is negative, NaN, or Inf, or if correlation is out of range
         """
+        # Validate inputs
+        if np.isnan(spread) or np.isinf(spread):
+            raise ValueError(f"spread must be finite, got {spread}")
+        if spread < 0:
+            raise ValueError(f"spread must be non-negative, got {spread}")
+        
+        if correlation is not None:
+            if np.isnan(correlation) or np.isinf(correlation):
+                raise ValueError(f"correlation must be finite, got {correlation}")
+            if not (-1 <= correlation <= 1):
+                raise ValueError(f"correlation must be in [-1, 1], got {correlation}")
+        
         if quant_metrics is None:
             quant_metrics = {}
 
@@ -213,7 +286,7 @@ class OpportunityScorer:
         # Spread is the performance gap between the short and long legs:
         # spread = short_score - long_score (absolute). Large spread implies
         # a stronger mean-reversion opportunity, so it becomes the base score.
-        opportunity_score = spread
+        opportunity_score = float(spread)
 
         # Adjust based on correlation
         sc = self.scoring
@@ -317,17 +390,39 @@ class OpportunityScorer:
 
             f1_metric = self._get_metric(quant_metrics, "classification_f1", "kalman_classification_f1")
             if f1_metric is not None:
-                if f1_metric >= 0.7:
+                # Validate F1 is in valid range [0, 1]
+                if not (0 <= f1_metric <= 1):
+                    # Skip invalid F1 values
+                    pass
+                elif f1_metric >= 0.7:
                     opportunity_score *= sc.get("f1_high_bonus", 1.05)
                 elif f1_metric >= 0.6:
                     opportunity_score *= sc.get("f1_mid_bonus", 1.02)
 
-        return float(opportunity_score)
+        # Validate final result
+        if np.isnan(opportunity_score) or np.isinf(opportunity_score):
+            return 0.0
+        
+        # Ensure non-negative
+        return max(0.0, float(opportunity_score))
 
     def _apply_momentum_correlation(self, score: float, correlation: float) -> float:
         """
         Adjust score for momentum strategy based on correlation characteristics.
+        
+        Args:
+            score: Current opportunity score
+            correlation: Correlation coefficient (should be in [-1, 1])
+            
+        Returns:
+            Adjusted score
         """
+        # Validate inputs
+        if np.isnan(score) or np.isinf(score):
+            return 0.0
+        if np.isnan(correlation) or np.isinf(correlation):
+            return score
+        
         mf = self.momentum_filters
         abs_corr = abs(correlation)
 
@@ -338,7 +433,10 @@ class OpportunityScorer:
         elif abs_corr > mf.get("high_corr_threshold", 0.75):
             score *= mf.get("high_corr_penalty", 1.0)
 
-        return score
+        # Validate result
+        if np.isnan(score) or np.isinf(score):
+            return 0.0
+        return max(0.0, score)
 
     def _apply_momentum_adx_filter(
         self,
@@ -348,9 +446,25 @@ class OpportunityScorer:
     ) -> float:
         """
         Require both legs to have sufficient ADX strength for momentum setups.
+        
+        Args:
+            score: Current opportunity score
+            long_adx: ADX value for long symbol (optional)
+            short_adx: ADX value for short symbol (optional)
+            
+        Returns:
+            Adjusted score (0.0 if ADX requirements not met)
         """
+        # Validate score
+        if np.isnan(score) or np.isinf(score):
+            return 0.0
+        
         if long_adx is None or short_adx is None:
             return score
+
+        # Filter out NaN/Inf ADX values
+        if np.isnan(long_adx) or np.isinf(long_adx) or np.isnan(short_adx) or np.isinf(short_adx):
+            return 0.0
 
         mf = self.momentum_filters
         min_adx = mf.get("min_adx", 18.0)
@@ -364,7 +478,10 @@ class OpportunityScorer:
         if long_adx >= strong_adx and short_adx >= strong_adx:
             score *= mf.get("adx_strong_bonus", 1.0)
 
-        return score
+        # Validate result
+        if np.isnan(score) or np.isinf(score):
+            return 0.0
+        return max(0.0, score)
 
     def _apply_momentum_risk_adjustments(
         self,
@@ -373,7 +490,18 @@ class OpportunityScorer:
     ) -> float:
         """
         Apply lightweight risk checks for momentum strategy.
+        
+        Args:
+            score: Current opportunity score
+            quant_metrics: Quantitative metrics dictionary
+            
+        Returns:
+            Adjusted score
         """
+        # Validate score
+        if np.isnan(score) or np.isinf(score):
+            return 0.0
+        
         sharpe = self._get_metric(quant_metrics, "spread_sharpe", "kalman_spread_sharpe")
         if sharpe is not None and sharpe < (self.min_spread_sharpe / 2):
             score *= self.scoring.get("momentum_low_sharpe_penalty", 0.97)
@@ -386,7 +514,10 @@ class OpportunityScorer:
         if calmar is not None and calmar < max(self.min_calmar / 2, 0.1):
             score *= self.scoring.get("momentum_calmar_penalty", 0.98)
 
-        return score
+        # Validate result
+        if np.isnan(score) or np.isinf(score):
+            return 0.0
+        return max(0.0, score)
 
     def calculate_quantitative_score(
         self, quant_metrics: Optional[Dict[str, Optional[float]]] = None
@@ -465,12 +596,14 @@ class OpportunityScorer:
         # F1-score (uses Kalman if available per strategy)
         f1 = self._get_metric(quant_metrics, "classification_f1", "kalman_classification_f1")
         if f1 is not None:
-            excellent_threshold = w.get("f1_excellent_threshold", 0.7)
-            good_threshold = w.get("f1_good_threshold", 0.6)
-            if f1 > excellent_threshold:
-                score += w.get("f1_excellent_weight", 10.0)
-            elif f1 > good_threshold:
-                score += w.get("f1_good_weight", 5.0)
+            # Validate F1 is in valid range [0, 1]
+            if 0 <= f1 <= 1:
+                excellent_threshold = w.get("f1_excellent_threshold", 0.7)
+                good_threshold = w.get("f1_good_threshold", 0.6)
+                if f1 > excellent_threshold:
+                    score += w.get("f1_excellent_weight", 10.0)
+                elif f1 > good_threshold:
+                    score += w.get("f1_good_weight", 5.0)
         
         # Max DD (uses Kalman if available per strategy)
         max_dd = self._get_metric(quant_metrics, "max_drawdown", "kalman_max_drawdown")
@@ -498,11 +631,17 @@ class OpportunityScorer:
             long_adx = quant_metrics.get("long_adx")
             short_adx = quant_metrics.get("short_adx")
             if long_adx is not None and short_adx is not None:
-                avg_adx = (long_adx + short_adx) / 2.0
-                if avg_adx >= self.momentum_filters.get("strong_adx", 25.0):
-                    score += w.get("momentum_adx_strong_weight", 10.0)
-                elif avg_adx >= self.momentum_filters.get("min_adx", 18.0):
-                    score += w.get("momentum_adx_moderate_weight", 5.0)
+                # Validate ADX values
+                if not (np.isnan(long_adx) or np.isinf(long_adx) or np.isnan(short_adx) or np.isinf(short_adx)):
+                    avg_adx = (long_adx + short_adx) / 2.0
+                    if not (np.isnan(avg_adx) or np.isinf(avg_adx)):
+                        if avg_adx >= self.momentum_filters.get("strong_adx", 25.0):
+                            score += w.get("momentum_adx_strong_weight", 10.0)
+                        elif avg_adx >= self.momentum_filters.get("min_adx", 18.0):
+                            score += w.get("momentum_adx_moderate_weight", 5.0)
 
         max_score = w.get("max_score", 100.0)
-        return min(max_score, score)
+        # Validate final score
+        if np.isnan(score) or np.isinf(score):
+            return 0.0
+        return min(max_score, max(0.0, score))

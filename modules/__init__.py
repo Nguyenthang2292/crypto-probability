@@ -27,14 +27,13 @@ _ALIASES = {
     "modules.feature_selection": "modules.deeplearning.feature_selection",
     # pairs trading subpackage
     "modules.pairs_trading_cli": "modules.pairs_trading.cli",
-    "modules.pairs_trading_hedge_ratio": "modules.pairs_trading.hedge_ratio",
+    "modules.pairs_trading_hedge_ratio": "modules.pairs_trading.metrics.ols_hedge_ratio",
     "modules.pairs_trading_opportunity_scorer": "modules.pairs_trading.opportunity_scorer",
     "modules.pairs_trading_pair_metrics_computer": "modules.pairs_trading.pair_metrics_computer",
     "modules.pairs_trading_pairs_analyzer": "modules.pairs_trading.pairs_analyzer",
     "modules.pairs_trading_performance_analyzer": "modules.pairs_trading.performance_analyzer",
-    "modules.pairs_trading_risk_metrics": "modules.pairs_trading.risk_metrics",
-    "modules.pairs_trading_statistical_tests": "modules.pairs_trading.statistical_tests",
-    "modules.pairs_trading_zscore_metrics": "modules.pairs_trading.zscore_metrics",
+    "modules.pairs_trading_risk_metrics": "modules.pairs_trading.metrics.max_drawdown",
+    "modules.pairs_trading_zscore_metrics": "modules.pairs_trading.metrics.direction_metrics",
     # portfolio subpackage
     "modules.portfolio_correlation_analyzer": "modules.portfolio.correlation_analyzer",
     "modules.portfolio_hedge_finder": "modules.portfolio.hedge_finder",

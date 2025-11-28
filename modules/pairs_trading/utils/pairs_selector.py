@@ -13,55 +13,18 @@ def select_top_unique_pairs(pairs_df: pd.DataFrame, target_pairs: int) -> pd.Dat
     """
     Select up to target_pairs trading pairs, prioritizing unique symbols for diversification.
     
-    This function maximizes portfolio diversification by selecting pairs with non-overlapping
-    symbols when possible. It uses a two-pass selection strategy:
-    
-    1. **First pass**: Selects pairs where both long_symbol and short_symbol are unique
-       (not used in previously selected pairs). This ensures maximum symbol diversity.
-    
-    2. **Second pass**: If the target number hasn't been reached, fills remaining slots
-       with any available pairs from the DataFrame.
-    
-    3. **Fallback**: If no pairs are selected in the first two passes, returns the top N
-       pairs directly from the input DataFrame (assumes pairs_df is pre-sorted by score).
-    
-    The function preserves the original order of pairs_df, selecting the first matching
-    pairs that meet the uniqueness criteria.
+    Uses a two-pass strategy: (1) Select pairs with completely unique symbols (non-overlapping),
+    (2) Fill remaining slots with any available pairs. Assumes pairs_df is pre-sorted by score.
     
     Args:
-        pairs_df: DataFrame containing pairs data with required columns:
-            - long_symbol: Symbol to go long on (str)
-            - short_symbol: Symbol to go short on (str)
-            Optional columns (e.g., 'score', 'opportunity_score') are preserved in output.
-        target_pairs: Maximum number of pairs to select. If fewer unique pairs are
-            available, returns fewer pairs (not guaranteed to return exactly target_pairs).
+        pairs_df: DataFrame with 'long_symbol' and 'short_symbol' columns. Should be sorted
+            by desirability (e.g., opportunity_score) as pairs are selected in order.
+        target_pairs: Maximum number of pairs to select. May return fewer if insufficient
+            unique pairs are available.
         
     Returns:
-        DataFrame with selected pairs, preserving all original columns.
-        - Index is reset (0-based sequential)
-        - Pairs are in selection order (first pass pairs, then second pass pairs)
-        - Returns original pairs_df unchanged if pairs_df is empty or None
-        
-    Example:
-        >>> pairs = pd.DataFrame({
-        ...     'long_symbol': ['BTC/USDT', 'ETH/USDT', 'BTC/USDT', 'SOL/USDT'],
-        ...     'short_symbol': ['ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'ADA/USDT'],
-        ...     'score': [0.9, 0.8, 0.7, 0.6]
-        ... })
-        >>> selected = select_top_unique_pairs(pairs, target_pairs=2)
-        >>> len(selected)
-        2
-        >>> # First pair: BTC/USDT - ETH/USDT (both unique)
-        >>> # Second pair: ETH/USDT - BNB/USDT (ETH already used, but selected in second pass)
-        >>> selected['long_symbol'].tolist()
-        ['BTC/USDT', 'ETH/USDT']
-    
-    Note:
-        - This function assumes pairs_df is already sorted by desirability (e.g., score)
-          as it selects pairs in order of appearance
-        - Symbols are considered unique at the pair level - if a symbol appears in multiple
-          pairs, only the first occurrence (in order) is selected in the first pass
-        - Returns fewer than target_pairs if insufficient unique pairs are available
+        DataFrame with selected pairs (all original columns preserved, index reset).
+        Returns original pairs_df if empty/None, or top N pairs if no unique selections found.
     """
     if pairs_df is None or pairs_df.empty:
         return pairs_df

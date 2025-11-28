@@ -20,10 +20,20 @@ except ImportError:
     }
 
 try:
-    from modules.common.utils import color_text
+    from modules.common.utils import (
+        color_text,
+        log_warn,
+        log_error,
+    )
 except ImportError:
     def color_text(text, color=None, style=None):
         return text
+    
+    def log_warn(message: str) -> None:
+        print(f"[WARN] {message}")
+    
+    def log_error(message: str) -> None:
+        print(f"[ERROR] {message}")
 
 from colorama import Fore
 
@@ -74,20 +84,10 @@ def parse_weights(weights_str: Optional[str], preset_key: Optional[str] = None) 
         # Validate weights sum to 1.0
         total = sum(weights.values())
         if abs(total - 1.0) > 0.01:
-            print(
-                color_text(
-                    f"Warning: Weights sum to {total:.3f}, not 1.0. Normalizing...",
-                    Fore.YELLOW,
-                )
-            )
+            log_warn(f"Weights sum to {total:.3f}, not 1.0. Normalizing...")
             weights = {k: v / total for k, v in weights.items()}
     except Exception as e:
-        print(
-            color_text(
-                f"Error parsing weights: {e}. Using default weights.",
-                Fore.RED,
-            )
-        )
+        log_error(f"Error parsing weights: {e}. Using default weights.")
         weights = PAIRS_TRADING_WEIGHTS.copy()
     
     return weights

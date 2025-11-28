@@ -12,6 +12,9 @@ from modules.pairs_trading.utils.pairs_selector import (
 from modules.pairs_trading.utils.ensure_symbols_in_pools import (
     ensure_symbols_in_candidate_pools,
 )
+from modules.pairs_trading.utils.pairs_validator import (
+    validate_pairs,
+)
 
 __all__ = [
     # Pair selection
@@ -19,4 +22,6 @@ __all__ = [
     'select_pairs_for_symbols',
     # Candidate pool management
     'ensure_symbols_in_candidate_pools',
+    # Pair validation
+    'validate_pairs',
 ]
