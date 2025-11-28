@@ -6,57 +6,9 @@ import pandas as pd
 from typing import Dict, Tuple, Optional, List
 from colorama import Fore, Style
 
-try:
-    from modules.common.utils import normalize_symbol, color_text, timeframe_to_minutes
-    from modules.common.ProgressBar import ProgressBar
-    from modules.common.ExchangeManager import ExchangeManager
-except ImportError:
-
-    def normalize_symbol(user_input: str, quote: str = "USDT") -> str:
-        if not user_input:
-            return f"BTC/{quote}"
-        norm = user_input.strip().upper()
-        if "/" in norm:
-            return norm
-        if norm.endswith(quote):
-            return f"{norm[:-len(quote)]}/{quote}"
-        return f"{norm}/{quote}"
-
-    def color_text(text: str, color=None, style=None) -> str:
-        return text
-
-    def timeframe_to_minutes(timeframe: str) -> int:
-        import re
-
-        match = re.match(r"^\s*(\d+)\s*([mhdw])\s*$", timeframe.lower())
-        if not match:
-            return 60
-        value, unit = match.groups()
-        value = int(value)
-        if unit == "m":
-            return value
-        if unit == "h":
-            return value * 60
-        if unit == "d":
-            return value * 60 * 24
-        if unit == "w":
-            return value * 60 * 24 * 7
-        return 60
-
-    class _NoOpProgressBar:
-        """Fallback progress bar that becomes a no-op when real class is unavailable."""
-
-        def __init__(self, *_, **__):
-            self.total = 0
-
-        def update(self, *_, **__):
-            return
-
-        def finish(self, *_, **__):
-            return
-
-    ProgressBar = _NoOpProgressBar
-    ExchangeManager = None
+from modules.common.utils import normalize_symbol, color_text, timeframe_to_minutes
+from modules.common.ProgressBar import ProgressBar
+from modules.common.ExchangeManager import ExchangeManager
 
 
 class DataFetcher:
