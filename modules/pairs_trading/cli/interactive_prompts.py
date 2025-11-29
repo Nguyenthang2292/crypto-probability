@@ -64,12 +64,18 @@ def prompt_interactive_mode() -> Dict[str, Optional[str]]:
     log_data("=" * 60)
     log_info("Pairs Trading Analysis - Interactive Launcher")
     log_data("=" * 60)
-    print("1) Auto mode  - analyze entire market to surface opportunities")
+    print(
+        color_text(
+            "1) Auto mode  - analyze entire market to surface opportunities",
+            Fore.MAGENTA,
+            Style.BRIGHT,
+        )
+    )
     print("2) Manual mode - focus on specific symbols you provide")
     print("3) Exit")
 
     while True:
-        choice = input(color_text("\nSelect option [1-3]: ", Fore.YELLOW)).strip() or "1"
+        choice = input(color_text("\nSelect option [1-3] (default 1): ", Fore.YELLOW)).strip() or "1"
         if choice in {"1", "2", "3"}:
             break
         log_error("Invalid selection. Please enter 1, 2, or 3.")
@@ -144,17 +150,18 @@ def prompt_kalman_preset_selection(
     if not presets:
         return current_delta, current_obs_cov, None
 
-    default_choice = "1"
+    default_choice = "2"
     log_info("Select Kalman filter profile for hedge ratio:")
     for idx, (key, data) in enumerate(presets, start=1):
         desc = data.get("description", "")
         delta = data.get("delta")
         obs_cov = data.get("obs_cov")
+        is_default = str(idx) == default_choice
         print(
             color_text(
                 f"{idx}) {key} (delta={delta:.2e}, obs_cov={obs_cov:.2f}) - {desc}",
-                Fore.WHITE,
-                Style.NORMAL,
+                Fore.MAGENTA if is_default else Fore.WHITE,
+                Style.BRIGHT if is_default else Style.NORMAL,
             )
         )
     choice_map = {str(idx): (key, data) for idx, (key, data) in enumerate(presets, start=1)}

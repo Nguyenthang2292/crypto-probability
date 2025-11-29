@@ -340,15 +340,17 @@ class DataFetcher:
         candidates: List[Tuple[str, float]] = []
 
         try:
-            exchange = (
-                self.exchange_manager.authenticated.connect_to_binance_with_credentials()
+            # Use public API - load_markets() doesn't require authentication
+            exchange = self.exchange_manager.public.connect_to_exchange_with_no_credentials(
+                "binance"
             )
-        except ValueError as exc:
-            log_error(f"Unable to list hedge candidates: {exc}")
+        except Exception as exc:
+            log_error(f"Unable to connect to Binance: {exc}")
             return []
 
         try:
-            markets = self.exchange_manager.authenticated.throttled_call(
+            # load_markets() is a public API call, no authentication needed
+            markets = self.exchange_manager.public.throttled_call(
                 exchange.load_markets
             )
         except Exception as exc:
