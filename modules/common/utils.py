@@ -1,5 +1,11 @@
 """
 Common utility functions for all algorithms.
+
+This module provides utilities organized into the following categories:
+- System: Platform-specific configuration
+- Data: DataFrame/Series manipulation
+- Domain: Trading-specific utilities (symbols, timeframes)
+- CLI/UI: Text formatting, user input, and logging
 """
 
 import re
@@ -39,8 +45,33 @@ def configure_windows_stdio() -> None:
 
 
 # ============================================================================
-# TIMEFRAME UTILITIES
+# DATA UTILITIES
 # ============================================================================
+
+def dataframe_to_close_series(df: Optional[pd.DataFrame]) -> Optional[pd.Series]:
+    """
+    Converts a fetched OHLCV DataFrame into a pandas Series of closing prices indexed by timestamp.
+
+    Args:
+        df: OHLCV DataFrame with columns ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+
+    Returns:
+        pandas Series of closing prices indexed by timestamp, or None if input is invalid
+    """
+    if df is None or df.empty:
+        return None
+    if "timestamp" not in df.columns or "close" not in df.columns:
+        return None
+    series = df.set_index("timestamp")["close"].copy()
+    series.name = "close"
+    return series
+
+
+# ============================================================================
+# DOMAIN-SPECIFIC UTILITIES (Trading)
+# ============================================================================
+
+# --- Timeframe Utilities ---
 
 def timeframe_to_minutes(timeframe: str) -> int:
     """
@@ -70,9 +101,7 @@ def timeframe_to_minutes(timeframe: str) -> int:
     return 60
 
 
-# ============================================================================
-# SYMBOL NORMALIZATION UTILITIES
-# ============================================================================
+# --- Symbol Normalization Utilities ---
 
 def normalize_symbol(user_input: str, quote: str = DEFAULT_QUOTE) -> str:
     """
@@ -114,31 +143,10 @@ def normalize_symbol_key(symbol: str) -> str:
 
 
 # ============================================================================
-# DATA UTILITIES
+# CLI/UI UTILITIES
 # ============================================================================
 
-def dataframe_to_close_series(df: Optional[pd.DataFrame]) -> Optional[pd.Series]:
-    """
-    Converts a fetched OHLCV DataFrame into a pandas Series of closing prices indexed by timestamp.
-
-    Args:
-        df: OHLCV DataFrame with columns ['timestamp', 'open', 'high', 'low', 'close', 'volume']
-
-    Returns:
-        pandas Series of closing prices indexed by timestamp, or None if input is invalid
-    """
-    if df is None or df.empty:
-        return None
-    if "timestamp" not in df.columns or "close" not in df.columns:
-        return None
-    series = df.set_index("timestamp")["close"].copy()
-    series.name = "close"
-    return series
-
-
-# ============================================================================
-# TEXT FORMATTING UTILITIES
-# ============================================================================
+# --- Text Formatting ---
 
 def color_text(text: str, color: str = Fore.WHITE, style: str = Style.NORMAL) -> str:
     """
@@ -181,60 +189,97 @@ def format_price(value: float) -> str:
     return f"{value:.{precision}f}"
 
 
-# ============================================================================
-# LOGGING UTILITIES
-# ============================================================================
+# --- User Input ---
 
-def log_data(message: str) -> None:
-    """Print message with cyan color."""
-    print(color_text(message, Fore.CYAN))
+def prompt_user_input(
+    prompt: str,
+    default: Optional[str] = None,
+    color: str = Fore.YELLOW,
+) -> str:
+    """
+    Prompt user for input with optional default value and colored prompt.
+    
+    Args:
+        prompt: Prompt message to display
+        default: Default value if user enters empty string
+        color: Colorama Fore color for prompt (default: Fore.YELLOW)
+        
+    Returns:
+        User input string, or default if empty input provided
+    """
+    user_input = input(color_text(prompt, color)).strip()
+    return user_input if user_input else (default or "")
 
 
+def extract_dict_from_namespace(namespace, keys: list) -> dict:
+    """
+    Extract a dictionary from a namespace object using specified keys.
+    
+    Args:
+        namespace: Namespace object (e.g., from argparse)
+        keys: List of attribute names to extract
+        
+    Returns:
+        Dictionary with extracted key-value pairs
+    """
+    return {key: getattr(namespace, key, None) for key in keys}
+
+
+# --- Logging Functions ---
+# Organized by severity level and purpose
+
+# Standard severity levels
 def log_info(message: str) -> None:
-    """Print message with blue color."""
+    """Print informational message with blue color."""
     print(color_text(message, Fore.BLUE))
 
 
 def log_success(message: str) -> None:
-    """Print message with green color."""
+    """Print success message with green color."""
     print(color_text(message, Fore.GREEN))
 
 
 def log_error(message: str) -> None:
-    """Print message with red color and bright style."""
+    """Print error message with red color and bright style."""
     print(color_text(message, Fore.RED, Style.BRIGHT))
 
 
 def log_warn(message: str) -> None:
-    """Print message with yellow color."""
+    """Print warning message with yellow color."""
     print(color_text(message, Fore.YELLOW))
 
 
 def log_debug(message: str) -> None:
-    """Print message with white color (dimmed)."""
+    """Print debug message with white color."""
     print(color_text(message, Fore.WHITE))
 
 
-def log_model(message: str) -> None:
-    """Print message with magenta color."""
-    print(color_text(message, Fore.MAGENTA))
+# Domain-specific logging
+def log_data(message: str) -> None:
+    """Print data-related message with cyan color."""
+    print(color_text(message, Fore.CYAN))
 
 
 def log_analysis(message: str) -> None:
-    """Print message with magenta color."""
+    """Print analysis-related message with magenta color."""
+    print(color_text(message, Fore.MAGENTA))
+
+
+def log_model(message: str) -> None:
+    """Print model-related message with magenta color."""
     print(color_text(message, Fore.MAGENTA))
 
 
 def log_exchange(message: str) -> None:
-    """Print message with cyan color (for exchange-related operations)."""
+    """Print exchange-related message with cyan color."""
     print(color_text(message, Fore.CYAN))
 
 
 def log_system(message: str) -> None:
-    """Print message with white color (for system-level messages)."""
+    """Print system-level message with white color."""
     print(color_text(message, Fore.WHITE))
 
 
 def log_progress(message: str) -> None:
-    """Print message with yellow color (for progress updates)."""
+    """Print progress update message with yellow color."""
     print(color_text(message, Fore.YELLOW))
