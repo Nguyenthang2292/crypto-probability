@@ -8,7 +8,7 @@ LUỒNG HOẠT ĐỘNG:
 ================
 
 1. HELPER FUNCTIONS (Color Utilities)
-   - _interpolate_color: Interpolate giữa 2 màu hex để tạo gradient
+   - (removed)
 
 2. CORE CALCULATIONS (Tính toán cơ bản)
    - calculate_weighted_ma: Tính weighted MA dựa trên price deltas
@@ -16,7 +16,7 @@ LUỒNG HOẠT ĐỘNG:
    - calculate_trend_direction: Xác định trend direction (bullish/bearish)
 
 3. VISUALIZATION (Màu sắc và heatmap)
-   - get_heatmap_color: Tính màu heatmap dựa trên levels và touches
+   - (removed)
 
 4. MAIN FUNCTION (Hàm chính)
    - calculate_range_oscillator: Orchestrates toàn bộ quá trình tính toán
@@ -79,45 +79,7 @@ import pandas_ta as ta
 
 
 # ============================================================================
-# 1. HELPER FUNCTIONS - Color Utilities
-# ============================================================================
-
-
-def _interpolate_color(color1: str, color2: str, ratio: float) -> str:
-    """Interpolate between two hex colors to create gradient.
-
-    Helper function used by get_heatmap_color to create smooth color transitions
-    between cold and hot zones based on touch count.
-
-    Args:
-        color1: First hex color (e.g., "#008000").
-        color2: Second hex color (e.g., "#09ff00").
-        ratio: Interpolation ratio (0.0 = color1, 1.0 = color2).
-
-    Returns:
-        Interpolated hex color string.
-    """
-    ratio = max(0.0, min(1.0, ratio))
-
-    def hex_to_rgb(hex_str: str) -> Tuple[int, int, int]:
-        hex_str = hex_str.lstrip("#")
-        return tuple(int(hex_str[i : i + 2], 16) for i in (0, 2, 4))
-
-    def rgb_to_hex(r: int, g: int, b: int) -> str:
-        return f"#{r:02x}{g:02x}{b:02x}"
-
-    rgb1 = hex_to_rgb(color1)
-    rgb2 = hex_to_rgb(color2)
-
-    r = int(rgb1[0] * (1 - ratio) + rgb2[0] * ratio)
-    g = int(rgb1[1] * (1 - ratio) + rgb2[1] * ratio)
-    b = int(rgb1[2] * (1 - ratio) + rgb2[2] * ratio)
-
-    return rgb_to_hex(r, g, b)
-
-
-# ============================================================================
-# 2. CORE CALCULATIONS - Basic Metrics
+# 1. CORE CALCULATIONS - Basic Metrics
 # ============================================================================
 
 
@@ -274,132 +236,7 @@ def calculate_trend_direction(
 
 
 # ============================================================================
-# 3. VISUALIZATION - Heatmap Colors
-# ============================================================================
-
-
-def get_heatmap_color(
-    val: float,
-    trend_dir: int,
-    source_series: pd.Series,
-    levels_inp: int = 2,
-    heat_thresh: int = 1,
-    weak_bullish_color: str = "#008000",  # green
-    strong_bullish_color: str = "#09ff00",  # bright green
-    weak_bearish_color: str = "#800000",  # maroon
-    strong_bearish_color: str = "#ff0000",  # red
-    point_mode: bool = True,
-) -> Optional[str]:
-    """Calculate heatmap color for a given oscillator value.
-
-    This function creates a heatmap visualization by:
-    1. Dividing the last 100 oscillator values into N levels
-    2. Counting how many times each level was "touched"
-    3. Assigning colors based on touch count (cold → hot gradient)
-    4. Finding the closest level to the current value and returning its color
-
-    The heatmap helps visualize where price has been trading most frequently
-    within the oscillator range, highlighting zones of high/low activity.
-
-    Port of Pine Script getHeatColor function.
-
-    Args:
-        val: Current oscillator value to get color for.
-        trend_dir: Trend direction (1 for bullish, -1 for bearish).
-        source_series: Source series for calculating levels (last 100 values used).
-        levels_inp: Number of heat levels (default: 2).
-        heat_thresh: Minimum touches per level (default: 1).
-        weak_bullish_color: Hex color for weak bullish zones.
-        strong_bullish_color: Hex color for strong bullish zones.
-        weak_bearish_color: Hex color for weak bearish zones.
-        strong_bearish_color: Hex color for strong bearish zones.
-        point_mode: If True, uses point mode (default: True).
-
-    Returns:
-        Hex color string or None if no valid color found.
-    """
-    if len(source_series) < 100:
-        return None
-
-    # Get last 100 values
-    recent = source_series.iloc[-100:].dropna()
-    if len(recent) < 2:
-        return None
-
-    hi = recent.max()
-    lo = recent.min()
-    rng = hi - lo
-
-    if rng <= 0:
-        return None
-
-    step = rng / levels_inp
-
-    # Determine trend colors
-    # For bullish trend: cold = weak bullish, hot = strong bullish
-    # For bearish trend: cold = weak bearish, hot = strong bearish
-    if trend_dir == 1:
-        cold_trend_col = weak_bullish_color
-        hot_trend_col = strong_bullish_color
-    else:
-        cold_trend_col = weak_bearish_color
-        hot_trend_col = strong_bearish_color
-
-    # Calculate levels and counts
-    level_vals = []
-    level_colors = []
-
-    for i in range(levels_inp):
-        if point_mode:
-            lvl = lo + step * (i + 0.5)
-        else:
-            lvl = lo + step * i
-
-        # Count touches
-        cnt = 0
-        for j in range(len(recent)):
-            if point_mode:
-                touch = (
-                    recent.iloc[j] >= lvl - step / 2
-                    and recent.iloc[j] < lvl + step / 2
-                )
-            else:
-                # For range mode, would need high/low series
-                # Simplified to point mode logic
-                touch = recent.iloc[j] >= lvl - step / 2 and recent.iloc[j] < lvl + step / 2
-
-            if touch:
-                cnt += 1
-
-        # Calculate color gradient
-        if cnt < heat_thresh:
-            col = cold_trend_col
-        elif cnt >= heat_thresh + 10:
-            col = hot_trend_col
-        else:
-            # Gradient between cold and hot
-            ratio = (cnt - heat_thresh) / 10.0
-            col = _interpolate_color(cold_trend_col, hot_trend_col, ratio)
-
-        level_vals.append(lvl)
-        level_colors.append(col)
-
-    # Find closest level
-    min_d = float("inf")
-    best = None
-
-    for k in range(len(level_vals)):
-        lvl = level_vals[k]
-        d = abs(val - lvl)
-        if d < min_d:
-            min_d = d
-            best = level_colors[k]
-
-    return best
-
-
-# ============================================================================
-# 4. MAIN FUNCTION - Range Oscillator Calculation
+# 2. MAIN FUNCTION - Range Oscillator Calculation
 # ============================================================================
 
 
@@ -499,27 +336,16 @@ def calculate_range_oscillator(
             # Price broke below lower bound → strong bearish
             osc_color = strong_bearish_color
         else:
-            # Step 4d: Get heatmap color
-            heat_color = get_heatmap_color(
-                osc_value,
-                current_trend_dir,
-                oscillator.iloc[: i + 1],
-                levels_inp=levels_inp,
-                heat_thresh=heat_thresh,
-                weak_bullish_color=weak_bullish_color,
-                strong_bullish_color=strong_bullish_color,
-                weak_bearish_color=weak_bearish_color,
-                strong_bearish_color=strong_bearish_color,
-                point_mode=True,
-            )
-
-            # Step 4e: Determine final color
-            if heat_color is None or no_color_on_flip:
-                # Trend flip or invalid heatmap → transition color
+            # Step 4d: Use transition color when price is within range
+            if no_color_on_flip:
+                # Trend flip → transition color
                 osc_color = transition_color
             else:
-                # Use heatmap color
-                osc_color = heat_color
+                # Use trend-based color
+                if current_trend_dir == 1:
+                    osc_color = weak_bullish_color
+                else:
+                    osc_color = weak_bearish_color
 
         oscillator_color.iloc[i] = osc_color
         prev_trend_dir = current_trend_dir
@@ -531,6 +357,5 @@ __all__ = [
     "calculate_weighted_ma",
     "calculate_atr_range",
     "calculate_trend_direction",
-    "get_heatmap_color",
     "calculate_range_oscillator",
 ]
