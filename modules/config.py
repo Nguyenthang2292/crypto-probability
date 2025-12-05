@@ -31,7 +31,7 @@ DEFAULT_CONTRACT_TYPE = "future"  # Contract type: 'spot', 'margin', or 'future'
 # Data Fetching Settings
 DEFAULT_SYMBOL = "BTC/USDT"  # Default trading pair
 DEFAULT_QUOTE = "USDT"  # Default quote currency
-DEFAULT_TIMEFRAME = "1h"  # Default timeframe
+DEFAULT_TIMEFRAME = "15m"  # Default timeframe
 DEFAULT_LIMIT = 1500  # Default number of candles to fetch
 
 
