@@ -79,65 +79,93 @@ def compute_atc_signals(
             - EMA_S, HMA_S, WMA_S, DEMA_S, LSMA_S, KAMA_S:
               Layer 2 equity weights
             - Average_Signal: Final combined signal
+
+    Raises:
+        ValueError: Nếu prices rỗng hoặc không hợp lệ.
+        ZeroDivisionError: Nếu tổng equity weights bằng 0 (rất hiếm).
     """
+    # Input validation
+    if prices is None or len(prices) == 0:
+        raise ValueError("prices không được rỗng hoặc None")
+    
     if src is None:
         src = prices
+    
+    if len(src) == 0:
+        raise ValueError("src không được rỗng")
+    
+    # Validate robustness
+    if robustness not in ("Narrow", "Medium", "Wide"):
+        robustness = "Medium"  # Default fallback
+    
+    # Validate cutout
+    if cutout < 0:
+        cutout = 0
+    if cutout >= len(prices):
+        raise ValueError(f"cutout ({cutout}) phải nhỏ hơn độ dài prices ({len(prices)})")
+
+    # Định nghĩa cấu hình cho các loại MA
+    ma_configs = [
+        ("EMA", ema_len, ema_w),
+        ("HMA", hull_len, hma_w),
+        ("WMA", wma_len, wma_w),
+        ("DEMA", dema_len, dema_w),
+        ("LSMA", lsma_len, lsma_w),
+        ("KAMA", kama_len, kama_w),
+    ]
 
     # DECLARE MOVING AVERAGES (SetOfMovingAverages)
-    EMA = set_of_moving_averages(ema_len, src, "EMA", robustness=robustness)
-    HMA = set_of_moving_averages(hull_len, src, "HMA", robustness=robustness)
-    WMA = set_of_moving_averages(wma_len, src, "WMA", robustness=robustness)
-    DEMA = set_of_moving_averages(dema_len, src, "DEMA", robustness=robustness)
-    LSMA = set_of_moving_averages(lsma_len, src, "LSMA", robustness=robustness)
-    KAMA = set_of_moving_averages(kama_len, src, "KAMA", robustness=robustness)
+    ma_tuples = {}
+    for ma_type, length, _ in ma_configs:
+        ma_tuple = set_of_moving_averages(length, src, ma_type, robustness=robustness)
+        if ma_tuple is None:
+            raise ValueError(f"Không thể tính toán {ma_type} với length={length}")
+        ma_tuples[ma_type] = ma_tuple
 
     # MAIN CALCULATIONS - Adaptability Layer 1
-    EMA_Signal, _, _ = _layer1_signal_for_ma(prices, EMA, L=La, De=De, cutout=cutout)
-    HMA_Signal, _, _ = _layer1_signal_for_ma(prices, HMA, L=La, De=De, cutout=cutout)
-    WMA_Signal, _, _ = _layer1_signal_for_ma(prices, WMA, L=La, De=De, cutout=cutout)
-    DEMA_Signal, _, _ = _layer1_signal_for_ma(prices, DEMA, L=La, De=De, cutout=cutout)
-    LSMA_Signal, _, _ = _layer1_signal_for_ma(prices, LSMA, L=La, De=De, cutout=cutout)
-    KAMA_Signal, _, _ = _layer1_signal_for_ma(prices, KAMA, L=La, De=De, cutout=cutout)
+    layer1_signals = {}
+    for ma_type, _, _ in ma_configs:
+        signal, _, _ = _layer1_signal_for_ma(
+            prices, ma_tuples[ma_type], L=La, De=De, cutout=cutout
+        )
+        layer1_signals[ma_type] = signal
 
     # Adaptability Layer 2
     R = rate_of_change(prices)
-    EMA_S = equity_series(ema_w, EMA_Signal, R, L=La, De=De, cutout=cutout)
-    HMA_S = equity_series(hma_w, HMA_Signal, R, L=La, De=De, cutout=cutout)
-    WMA_S = equity_series(wma_w, WMA_Signal, R, L=La, De=De, cutout=cutout)
-    DEMA_S = equity_series(dema_w, DEMA_Signal, R, L=La, De=De, cutout=cutout)
-    LSMA_S = equity_series(lsma_w, LSMA_Signal, R, L=La, De=De, cutout=cutout)
-    KAMA_S = equity_series(kama_w, KAMA_Signal, R, L=La, De=De, cutout=cutout)
+    layer2_equities = {}
+    for ma_type, _, weight in ma_configs:
+        equity = equity_series(
+            weight, layer1_signals[ma_type], R, L=La, De=De, cutout=cutout
+        )
+        layer2_equities[ma_type] = equity
 
     # FINAL CALCULATIONS
-    nom = (
-        cut_signal(EMA_Signal) * EMA_S
-        + cut_signal(HMA_Signal) * HMA_S
-        + cut_signal(WMA_Signal) * WMA_S
-        + cut_signal(DEMA_Signal) * DEMA_S
-        + cut_signal(LSMA_Signal) * LSMA_S
-        + cut_signal(KAMA_Signal) * KAMA_S
-    )
-    den = EMA_S + HMA_S + WMA_S + DEMA_S + LSMA_S + KAMA_S
-    Average_Signal = nom / den
+    nom = pd.Series(0.0, index=prices.index, dtype="float64")
+    den = pd.Series(0.0, index=prices.index, dtype="float64")
+    
+    for ma_type, _, _ in ma_configs:
+        signal = layer1_signals[ma_type]
+        equity = layer2_equities[ma_type]
+        nom += cut_signal(signal) * equity
+        den += equity
 
-    return {
-        "EMA_Signal": EMA_Signal,
-        "HMA_Signal": HMA_Signal,
-        "WMA_Signal": WMA_Signal,
-        "DEMA_Signal": DEMA_Signal,
-        "LSMA_Signal": LSMA_Signal,
-        "KAMA_Signal": KAMA_Signal,
-        "EMA_S": EMA_S,
-        "HMA_S": HMA_S,
-        "WMA_S": WMA_S,
-        "DEMA_S": DEMA_S,
-        "LSMA_S": LSMA_S,
-        "KAMA_S": KAMA_S,
-        "Average_Signal": Average_Signal,
-    }
+    # Xử lý division by zero: nếu den = 0 thì Average_Signal = 0
+    # (hoặc có thể dùng np.nan tùy vào logic nghiệp vụ)
+    Average_Signal = nom / den
+    # Thay thế inf và nan bằng 0 khi den = 0
+    Average_Signal = Average_Signal.fillna(0.0).replace([float("inf"), float("-inf")], 0.0)
+
+    # Build result dictionary
+    result = {}
+    for ma_type, _, _ in ma_configs:
+        result[f"{ma_type}_Signal"] = layer1_signals[ma_type]
+        result[f"{ma_type}_S"] = layer2_equities[ma_type]
+    
+    result["Average_Signal"] = Average_Signal
+
+    return result
 
 
 __all__ = [
     "compute_atc_signals",
 ]
-
