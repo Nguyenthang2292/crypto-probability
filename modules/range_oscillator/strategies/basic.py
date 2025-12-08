@@ -13,7 +13,7 @@ from modules.range_oscillator.core.utils import get_oscillator_data
 from modules.common.utils import log_debug, log_analysis
 
 
-def generate_signals_strategy1(
+def generate_signals_basic_strategy(
     high: Optional[pd.Series] = None,
     low: Optional[pd.Series] = None,
     close: Optional[pd.Series] = None,
@@ -202,6 +202,6 @@ def generate_signals_strategy1(
 
 
 __all__ = [
-    "generate_signals_strategy1",
+    "generate_signals_basic_strategy",
 ]
 

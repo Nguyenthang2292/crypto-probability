@@ -121,14 +121,14 @@ def generate_signals_strategy3_crossover(
     above_confirmation_mask = (
         (above_counts >= confirmation_bars) & 
         (above_threshold.astype(bool)) &
-        cross_above_shifted.fillna(False)  # Crossover occurred confirmation_bars ago (fill NaN for beginning)
+        cross_above_shifted.astype(bool).fillna(False)  # Crossover occurred confirmation_bars ago (fill NaN for beginning)
     )
     
     # For SHORT: crossover happened confirmation_bars ago AND oscillator has stayed below threshold
     below_confirmation_mask = (
         (below_counts >= confirmation_bars) & 
         (below_threshold.astype(bool)) &
-        cross_below_shifted.fillna(False)  # Crossover occurred confirmation_bars ago (fill NaN for beginning)
+        cross_below_shifted.astype(bool).fillna(False)  # Crossover occurred confirmation_bars ago (fill NaN for beginning)
     )
     
     # Confirmed crossovers: signal emitted AFTER confirmation period

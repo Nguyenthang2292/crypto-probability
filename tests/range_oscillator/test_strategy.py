@@ -5,12 +5,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from modules.range_oscillator.strategies.basic import generate_signals_strategy1
+from modules.range_oscillator.strategies.basic import generate_signals_basic_strategy
 from modules.range_oscillator.strategies.sustained import generate_signals_strategy2_sustained
 from modules.range_oscillator.strategies.crossover import generate_signals_strategy3_crossover
 from modules.range_oscillator.strategies.momentum import generate_signals_strategy4_momentum
 from modules.range_oscillator.strategies.combined import generate_signals_strategy5_combined
-from modules.range_oscillator.strategies.breakout import generate_signals_strategy6_breakout
+from modules.range_oscillator.strategies.breakout import generate_signals_breakout_strategy
 from modules.range_oscillator.strategies.divergence import generate_signals_strategy7_divergence
 from modules.range_oscillator.strategies.trend_following import generate_signals_strategy8_trend_following
 from modules.range_oscillator.strategies.mean_reversion import generate_signals_strategy9_mean_reversion
@@ -52,7 +52,7 @@ class TestStrategy1:
         """Test basic Strategy 1 functionality."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             high=high, low=low, close=close,
             length=50, mult=2.0
         )
@@ -70,7 +70,7 @@ class TestStrategy1:
         high, low, close = sample_ohlc_data
         oscillator, ma, range_atr = sample_oscillator_data
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr, close=close
         )
         
@@ -82,7 +82,7 @@ class TestStrategy1:
         """Test Strategy 1 with different parameters."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             high=high, low=low, close=close,
             oscillator_threshold=10.0,
             require_trend_confirmation=False,
@@ -103,7 +103,7 @@ class TestStrategy1:
         range_atr = pd.Series([1000.0] * 20, index=dates)
         close = pd.Series([51000.0] * 20, index=dates)  # Above MA for bullish trend
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr, close=close,
             require_trend_confirmation=True,
             oscillator_threshold=0.0
@@ -127,7 +127,7 @@ class TestStrategy1:
         range_atr = pd.Series([1000.0] * 20, index=dates)
         close = pd.Series([49000.0] * 20, index=dates)  # Below MA for bearish trend
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr, close=close,
             require_trend_confirmation=True,
             oscillator_threshold=0.0
@@ -151,7 +151,7 @@ class TestStrategy1:
         range_atr = pd.Series([1000.0] * 30, index=dates)
         close = pd.Series([51000.0] * 30, index=dates)  # Above MA
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr, close=close,
             require_trend_confirmation=False,  # Disable to see oscillator-only signals
             oscillator_threshold=0.0
@@ -176,7 +176,7 @@ class TestStrategy1:
         range_atr = pd.Series([1000.0] * 25, index=dates)
         close = pd.Series([51000.0] * 25, index=dates)  # Above MA
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr, close=close,
             require_trend_confirmation=True,
             oscillator_threshold=0.0
@@ -204,7 +204,7 @@ class TestStrategy1:
         range_atr = pd.Series([1000.0] * 20, index=dates)
         close = pd.Series([51000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr, close=close,
             require_trend_confirmation=True,
             oscillator_threshold=0.0
@@ -227,7 +227,7 @@ class TestStrategy1:
         range_atr = pd.Series([1000.0] * 15, index=dates)
         close = pd.Series([49000.0] * 15, index=dates)  # Below MA (bearish)
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr, close=close,
             require_trend_confirmation=False,  # Disable trend confirmation
             oscillator_threshold=0.0
@@ -250,7 +250,7 @@ class TestStrategy1:
         range_atr = pd.Series([1000.0] * 15, index=dates)
         close = pd.Series([49000.0] * 15, index=dates)  # Below MA (bearish)
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr, close=close,
             require_trend_confirmation=True,  # Enable trend confirmation
             oscillator_threshold=0.0
@@ -279,7 +279,7 @@ class TestStrategy1:
         import time
         start_time = time.time()
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr, close=close,
             require_trend_confirmation=True
         )
@@ -997,7 +997,7 @@ class TestStrategy5Integration:
         assert all(signals.isin([-1, 0, 1]))
         
         # Compare with Strategy 1 directly
-        signals1, strength1 = generate_signals_strategy1(
+        signals1, strength1 = generate_signals_basic_strategy(
             high=high, low=low, close=close
         )
         
@@ -1015,7 +1015,7 @@ class TestStrategy6:
         """Test basic Strategy 6 functionality."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy6_breakout(
+        signals, strength = generate_signals_breakout_strategy(
             high=high, low=low, close=close,
             upper_threshold=100.0,
             lower_threshold=-100.0,
@@ -1032,7 +1032,7 @@ class TestStrategy6:
         high, low, close = sample_ohlc_data
         oscillator, ma, range_atr = sample_oscillator_data
         
-        signals, strength = generate_signals_strategy6_breakout(
+        signals, strength = generate_signals_breakout_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             upper_threshold=80.0,
             detect_exhaustion=False
@@ -1046,21 +1046,21 @@ class TestStrategy6:
         high, low, close = sample_ohlc_data
         
         with pytest.raises(ValueError, match="confirmation_bars must be > 0"):
-            generate_signals_strategy6_breakout(
+            generate_signals_breakout_strategy(
                 high=high, low=low, close=close,
                 require_confirmation=True,
                 confirmation_bars=0
             )
         
         with pytest.raises(ValueError, match="exhaustion_threshold must be >= 0"):
-            generate_signals_strategy6_breakout(
+            generate_signals_breakout_strategy(
                 high=high, low=low, close=close,
                 detect_exhaustion=True,
                 exhaustion_threshold=-1.0
             )
         
         with pytest.raises(ValueError, match="upper_threshold.*must be > lower_threshold"):
-            generate_signals_strategy6_breakout(
+            generate_signals_breakout_strategy(
                 high=high, low=low, close=close,
                 upper_threshold=50.0,
                 lower_threshold=100.0
@@ -1076,7 +1076,7 @@ class TestStrategy6:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy6_breakout(
+        signals, strength = generate_signals_breakout_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             upper_threshold=100.0,
             lower_threshold=-100.0,
@@ -1097,7 +1097,7 @@ class TestStrategy6:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy6_breakout(
+        signals, strength = generate_signals_breakout_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             upper_threshold=100.0,
             lower_threshold=-100.0,
@@ -1346,7 +1346,7 @@ class TestSignalSummary:
         """Test basic signal summary functionality."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             high=high, low=low, close=close
         )
         
@@ -1408,7 +1408,7 @@ class TestEdgeCases:
         close = pd.Series([49500] * 10, index=dates)
         
         # Should not raise errors, but may return mostly zeros
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             high=high, low=low, close=close, length=5
         )
         
@@ -1423,7 +1423,7 @@ class TestEdgeCases:
         close_with_nan = close.copy()
         close_with_nan.iloc[10:15] = np.nan
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             high=high, low=low, close=close_with_nan
         )
         
@@ -1440,7 +1440,7 @@ class TestConflictHandling:
         """Test Strategy 1 handles conflicts (both LONG and SHORT conditions)."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             high=high, low=low, close=close
         )
         
@@ -1496,7 +1496,7 @@ class TestConflictHandling:
         """Test Strategy 6 handles conflicts."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy6_breakout(
+        signals, strength = generate_signals_breakout_strategy(
             high=high, low=low, close=close
         )
         
@@ -1548,7 +1548,7 @@ class TestNaNHandling:
         close_with_nan = close.copy()
         close_with_nan.iloc[50:60] = np.nan
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             high=high, low=low, close=close_with_nan
         )
         
@@ -1626,7 +1626,7 @@ class TestNaNHandling:
         ma = close.rolling(50).mean()
         range_atr = pd.Series(np.ones(len(close)) * 1000, index=close.index)
         
-        signals, strength = generate_signals_strategy6_breakout(
+        signals, strength = generate_signals_breakout_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr
         )
         
@@ -1713,7 +1713,7 @@ class TestLookAheadBiasPrevention:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy6_breakout(
+        signals, strength = generate_signals_breakout_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             upper_threshold=100.0,
             lower_threshold=-100.0,
@@ -1762,7 +1762,7 @@ class TestSignalStrengthCalculation:
         """Test Strategy 1 signal strength is in valid range."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             high=high, low=low, close=close
         )
         
@@ -1825,7 +1825,7 @@ class TestSignalStrengthCalculation:
         """Test Strategy 6 signal strength."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy6_breakout(
+        signals, strength = generate_signals_breakout_strategy(
             high=high, low=low, close=close
         )
         
@@ -1877,7 +1877,7 @@ class TestSignalStrengthCalculation:
         range_atr = pd.Series([1000.0] * 10, index=dates)
         close = pd.Series([51000.0] * 10, index=dates)  # Above MA
         
-        signals, strength = generate_signals_strategy1(
+        signals, strength = generate_signals_basic_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr, close=close,
             require_trend_confirmation=True
         )
