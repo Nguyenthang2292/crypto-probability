@@ -131,12 +131,13 @@ def get_range_oscillator_signal(
             length=osc_length,
             mult=osc_mult,
             config=config,
+            
         )
 
-        # Unpack tuple: (signal_series, strength_series, confidence_series)
-        # when return_confidence_score=True
+        # Unpack tuple: (signal_series, strength_series, strategy_stats, confidence_series)
+        # Return type is always 4 elements: Tuple[pd.Series, pd.Series, Optional[Dict], Optional[pd.Series]]
         signals = result[0]  # signal_series
-        confidence = result[2]  # confidence_series (index 2 when return_confidence_score=True)
+        confidence = result[3]  # confidence_series (index 3, None if return_confidence_score=False)
 
         if signals is None or signals.empty:
             return None

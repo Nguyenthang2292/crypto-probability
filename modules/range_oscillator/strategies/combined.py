@@ -474,12 +474,7 @@ def generate_signals_strategy5_combined(
     # Issue 4 specific args (if passed manually)
     weighted_min_diff: float = 0.1,
     weighted_min_total: float = 0.5,
-) -> Union[
-    Tuple[pd.Series, pd.Series],
-    Tuple[pd.Series, pd.Series, Dict],
-    Tuple[pd.Series, pd.Series, pd.Series],
-    Tuple[pd.Series, pd.Series, Dict, pd.Series],
-]:
+) -> Tuple[pd.Series, pd.Series, Optional[Dict], Optional[pd.Series]]:
     """
     Generate trading signals based on Range Oscillator Strategy 5: Combined (Enhanced).
     
@@ -598,12 +593,12 @@ def generate_signals_strategy5_combined(
     if not current_enabled_strategies:
         if debug_enabled: log_debug("[Strategy5] No strategies enabled, fallback to Strategy 1")
         signals, strength = generate_signals_strategy1(high, low, close, oscillator, ma, range_atr, length, mult)
-        result = [signals, strength]
-        if config.return_strategy_stats:
-            result.append({})
-        if config.return_confidence_score:
-            result.append(pd.Series(0.0, index=index, dtype="float64"))
-        return tuple(result)
+        
+        # Consistent 4-element return
+        stats_out = {} if config.return_strategy_stats else None
+        conf_out = pd.Series(0.0, index=index, dtype="float64") if config.return_confidence_score else None
+        
+        return signals, strength, stats_out, conf_out
 
     # Run strategies
     # Sửa lỗi số 2: Remove broad try-except, let it fail for syntax errors, catch only operational if needed.
@@ -692,12 +687,12 @@ def generate_signals_strategy5_combined(
     if not signals_dict:
         if debug_enabled: log_debug("[Strategy5] All strategies returned no signals.")
         signals, strength = generate_signals_strategy1(high, low, close, oscillator, ma, range_atr, length, mult)
-        result = [signals, strength]
-        if config.return_strategy_stats:
-            result.append({})
-        if config.return_confidence_score:
-            result.append(pd.Series(0.0, index=index, dtype="float64"))
-        return tuple(result)
+        
+        # Consistent 4-element return
+        stats_out = {} if config.return_strategy_stats else None
+        conf_out = pd.Series(0.0, index=index, dtype="float64") if config.return_confidence_score else None
+        
+        return signals, strength, stats_out, conf_out
 
     # -------------------------------------------------------------------------
     # 3. Aggregation (Sửa lỗi số 1: Index Safety)
@@ -833,11 +828,10 @@ def generate_signals_strategy5_combined(
     signal_series = signal_series.where(valid_mask, 0)
     strength_series = strength_series.where(valid_mask, 0.0)
     
-    result = [signal_series, strength_series]
+    # Consistent 4-element return
+    stats_out = strategy_stats if config.return_strategy_stats else None
     
-    if config.return_strategy_stats:
-        result.append(strategy_stats)
-        
+    conf_out = None
     if config.return_confidence_score:
         confidence = _calculate_confidence_score(
             signals_array, strengths_array,
@@ -845,10 +839,9 @@ def generate_signals_strategy5_combined(
             config.consensus.mode,
             config.consensus.threshold
         )
-        conf_series = pd.Series(confidence, index=index)
-        result.append(conf_series)
+        conf_out = pd.Series(confidence, index=index)
         
-    return tuple(result)
+    return signal_series, strength_series, stats_out, conf_out
 
 __all__ = [
     "generate_signals_strategy5_combined",
