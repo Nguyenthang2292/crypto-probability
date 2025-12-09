@@ -1,11 +1,11 @@
 """
-Tests for equity module.
+Tests for compute_equity module.
 """
 import numpy as np
 import pandas as pd
 import pytest
 
-from modules.adaptive_trend.equity import equity_series
+from modules.adaptive_trend.core.compute_equity import equity_series
 
 
 def test_equity_series_basic():
@@ -94,10 +94,9 @@ def test_equity_series_empty_series():
 
 
 def test_equity_series_none_input():
-    """Test that equity_series handles None input."""
-    result = equity_series(1.0, None, None, L=0.02, De=0.03)
-    
-    assert len(result) == 0
+    """Test that equity_series raises error for None input."""
+    with pytest.raises(ValueError, match="sig and R cannot be None"):
+        equity_series(1.0, None, None, L=0.02, De=0.03)
 
 
 def test_equity_series_zero_length():

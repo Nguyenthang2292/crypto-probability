@@ -11,11 +11,11 @@ Computation structure:
 3. Final: Combine all to create Average_Signal
 
 Supporting modules:
-- utils.py: Core utilities (rate_of_change, diflen, exp_growth)
-- moving_averages.py: MA calculations
-- signals.py: Signal generation
-- equity.py: Equity curve calculations
-- layer1.py: Layer 1 processing
+- utils: Core utilities (rate_of_change, diflen, exp_growth)
+- compute_moving_averages.py: MA calculations
+- signal_detection.py: Signal generation
+- compute_equity.py: Equity curve calculations
+- process_layer1.py: Layer 1 processing
 
 Performance optimizations:
 - Vectorized operations using NumPy for final calculations
@@ -46,10 +46,10 @@ except ImportError:
     def log_error(msg: str) -> None:
         print(f"[ERROR] {msg}")
 
-from .equity import equity_series
-from .layer1 import cut_signal, _layer1_signal_for_ma
-from .moving_averages import set_of_moving_averages
-from .utils import rate_of_change
+from .compute_equity import equity_series
+from .process_layer1 import cut_signal, _layer1_signal_for_ma
+from .compute_moving_averages import set_of_moving_averages
+from modules.adaptive_trend.utils import rate_of_change
 
 
 def compute_atc_signals(
@@ -198,7 +198,7 @@ def compute_atc_signals(
         equity = layer2_equities[ma_type]
         
         # Cut signal: vectorized operation
-        cut_sig = cut_signal(signal)
+        cut_sig = cut_signal(signal, cutout=cutout)
         
         # Convert to numpy arrays for faster computation
         cut_sig_values = cut_sig.values
@@ -241,3 +241,4 @@ def compute_atc_signals(
 __all__ = [
     "compute_atc_signals",
 ]
+

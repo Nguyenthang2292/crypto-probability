@@ -74,7 +74,7 @@ File `modules/range_oscillator/strategies/combined.py` đã được cải thi�
 
 ### Ví Dụ 1: Sử Dụng Cơ Bản (Backward Compatible)
 ```python
-signals, strength = generate_signals_strategy5_combined(
+signals, strength = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     use_sustained=True,
     use_crossover=True,
@@ -84,7 +84,7 @@ signals, strength = generate_signals_strategy5_combined(
 
 ### Ví Dụ 2: Sử Dụng Tất Cả Strategies (Threshold Mode - Default)
 ```python
-signals, strength = generate_signals_strategy5_combined(
+signals, strength = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     enabled_strategies=[2, 3, 4, 6, 7, 8, 9],  # Tất cả strategies
     # consensus_mode="threshold" là mặc định, consensus_threshold=0.5
@@ -93,7 +93,7 @@ signals, strength = generate_signals_strategy5_combined(
 
 ### Ví Dụ 3: Threshold Mode với Custom Threshold
 ```python
-signals, strength = generate_signals_strategy5_combined(
+signals, strength = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     enabled_strategies=[2, 3, 4, 6, 7],
     consensus_mode="threshold",
@@ -103,7 +103,7 @@ signals, strength = generate_signals_strategy5_combined(
 
 ### Ví Dụ 4: Weighted Voting
 ```python
-signals, strength = generate_signals_strategy5_combined(
+signals, strength = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     enabled_strategies=[2, 3, 4, 6],
     consensus_mode="weighted",
@@ -118,7 +118,7 @@ signals, strength = generate_signals_strategy5_combined(
 
 ### Ví Dụ 5: Threshold Mode - Strict (Yêu Cầu Nhiều Strategies)
 ```python
-signals, strength = generate_signals_strategy5_combined(
+signals, strength = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     enabled_strategies=[2, 3, 4, 6, 7, 8],
     consensus_mode="threshold",
@@ -128,7 +128,7 @@ signals, strength = generate_signals_strategy5_combined(
 
 ### Ví Dụ 6: Lọc Signal Strength
 ```python
-signals, strength = generate_signals_strategy5_combined(
+signals, strength = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     enabled_strategies=[2, 3, 4],
     min_signal_strength=0.3  # Chỉ chấp nhận signals có strength >= 0.3
@@ -137,7 +137,7 @@ signals, strength = generate_signals_strategy5_combined(
 
 ### Ví Dụ 7: Lấy Thống Kê
 ```python
-signals, strength, stats = generate_signals_strategy5_combined(
+signals, strength, stats = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     enabled_strategies=[2, 3, 4, 6],
     return_strategy_stats=True
@@ -153,7 +153,7 @@ signals, strength, stats = generate_signals_strategy5_combined(
 
 ### Ví Dụ 8: Tùy Chỉnh Parameters Cho Strategies
 ```python
-signals, strength = generate_signals_strategy5_combined(
+signals, strength = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     enabled_strategies=[2, 3, 4, 6],
     # Strategy 2 parameters
@@ -171,7 +171,7 @@ signals, strength = generate_signals_strategy5_combined(
 
 ### Ví Dụ 9: Dynamic Strategy Selection
 ```python
-signals, strength = generate_signals_strategy5_combined(
+signals, strength = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     enabled_strategies=[2, 3, 4, 6, 7, 8, 9],  # Tất cả strategies
     enable_dynamic_selection=True,  # Bật dynamic selection
@@ -183,7 +183,7 @@ signals, strength = generate_signals_strategy5_combined(
 
 ### Ví Dụ 10: Adaptive Weights
 ```python
-signals, strength = generate_signals_strategy5_combined(
+signals, strength = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     enabled_strategies=[2, 3, 4, 6],
     consensus_mode="weighted",
@@ -194,7 +194,7 @@ signals, strength = generate_signals_strategy5_combined(
 
 ### Ví Dụ 11: Confidence Score
 ```python
-signals, strength, confidence = generate_signals_strategy5_combined(
+signals, strength, confidence = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     enabled_strategies=[2, 3, 4, 6],
     return_confidence_score=True,  # Trả về confidence score
@@ -206,7 +206,7 @@ signals, strength, confidence = generate_signals_strategy5_combined(
 
 ### Ví Dụ 12: Kết Hợp Tất Cả Tính Năng (Including Dynamic Selection + Adaptive Weights)
 ```python
-signals, strength, stats, confidence = generate_signals_strategy5_combined(
+signals, strength, stats, confidence = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     enabled_strategies=[2, 3, 4, 6, 7, 8, 9],
     # Dynamic selection: Tự động chọn strategies dựa trên market conditions

@@ -9,11 +9,11 @@ import pandas as pd
 import numpy as np
 import os
 
-from modules.range_oscillator.core.utils import get_oscillator_data
+from modules.range_oscillator.utils.oscillator_data import get_oscillator_data
 from modules.common.utils import log_debug, log_analysis
 
 
-def generate_signals_strategy8_trend_following(
+def generate_signals_trend_following_strategy(
     high: Optional[pd.Series] = None,
     low: Optional[pd.Series] = None,
     close: Optional[pd.Series] = None,
@@ -162,6 +162,6 @@ def generate_signals_strategy8_trend_following(
 
 
 __all__ = [
-    "generate_signals_strategy8_trend_following",
+    "generate_signals_trend_following_strategy",
 ]
 

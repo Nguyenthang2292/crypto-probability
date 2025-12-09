@@ -19,7 +19,7 @@ from modules.common.utils import (
     log_progress,
 )
 
-from modules.adaptive_trend.layer1 import trend_sign
+from modules.adaptive_trend.core.process_layer1 import trend_sign
 
 
 def display_atc_signals(

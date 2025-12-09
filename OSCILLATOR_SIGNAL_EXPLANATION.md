@@ -59,7 +59,7 @@ Mỗi strategy phân tích oscillator và tạo signals dựa trên logic khác 
 
 ### Strategy 5: Combined (Sustained + Crossover + Momentum)
 ```python
-signals, signal_strength = generate_signals_strategy5_combined(
+signals, signal_strength = generate_signals_combined_all_strategy(
     high=high, low=low, close=close,
     length=50, mult=2.0,
     use_sustained=True,    # Strategy 2
@@ -95,7 +95,7 @@ signals, signal_strength = generate_signals_strategy6_breakout(
 
 ### Strategy 7: Divergence
 ```python
-signals, signal_strength = generate_signals_strategy7_divergence(
+signals, signal_strength = generate_signals_divergence_strategy(
     high=high, low=low, close=close,
     length=50, mult=2.0,
 )
@@ -108,7 +108,7 @@ signals, signal_strength = generate_signals_strategy7_divergence(
 
 ### Strategy 8: Trend Following
 ```python
-signals, signal_strength = generate_signals_strategy8_trend_following(
+signals, signal_strength = generate_signals_trend_following_strategy(
     high=high, low=low, close=close,
     length=50, mult=2.0,
 )
@@ -121,7 +121,7 @@ signals, signal_strength = generate_signals_strategy8_trend_following(
 
 ### Strategy 9: Mean Reversion
 ```python
-signals, signal_strength = generate_signals_strategy9_mean_reversion(
+signals, signal_strength = generate_signals_mean_reversion_strategy(
     high=high, low=low, close=close,
     length=50, mult=2.0,
 )
@@ -140,7 +140,7 @@ Sau khi mỗi strategy tạo ra một Series signals (với mỗi bar có giá t
 
 ```python
 # Ví dụ với Strategy 5:
-signals, signal_strength = generate_signals_strategy5_combined(...)
+signals, signal_strength = generate_signals_combined_all_strategy(...)
 
 # Lấy latest signal (bỏ qua NaN values)
 non_nan_signals = signals.dropna()

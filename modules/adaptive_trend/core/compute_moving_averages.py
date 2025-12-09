@@ -16,7 +16,7 @@ import pandas_ta as ta
 from modules.common.utils import log_warn, log_error
 
 from modules.common.indicators.momentum import calculate_kama_series
-from .utils import diflen
+from modules.adaptive_trend.utils import diflen
 
 
 def calculate_kama_atc(

@@ -86,6 +86,7 @@ def test_get_atc_params():
     from main_atc import ATCAnalyzer
     
     args = SimpleNamespace(
+        timeframe="1h",
         limit=1500,
         ema_len=28,
         hma_len=28,
@@ -182,6 +183,7 @@ def test_get_symbol_input_from_args():
     from main_atc import ATCAnalyzer
     
     args = SimpleNamespace(
+        timeframe="1h",
         symbol="ETH/USDT",
         quote="USDT",
         no_prompt=True,
@@ -200,6 +202,7 @@ def test_get_symbol_input_from_prompt(mock_input):
     from main_atc import ATCAnalyzer
     
     args = SimpleNamespace(
+        timeframe="1h",
         symbol=None,
         quote="USDT",
         no_prompt=False,
@@ -442,7 +445,13 @@ def test_run_manual_mode_success(mock_get_symbol, mock_display_config, mock_anal
     analyzer.selected_timeframe = "1h"
     
     mock_get_symbol.return_value = "BTC/USDT"
-    mock_analyze.return_value = True
+    mock_analyze.return_value = {
+        "symbol": "BTC/USDT",
+        "df": pd.DataFrame(),
+        "atc_results": {},
+        "current_price": 50000.0,
+        "exchange_label": "binance",
+    }
     
     analyzer.run_manual_mode()
     
@@ -482,7 +491,7 @@ def test_run_manual_mode_failure(mock_get_symbol, mock_display_config, mock_anal
     analyzer.selected_timeframe = "1h"
     
     mock_get_symbol.return_value = "BTC/USDT"
-    mock_analyze.return_value = False
+    mock_analyze.return_value = None  # Analysis failed
     
     analyzer.run_manual_mode()
     

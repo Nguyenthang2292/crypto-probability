@@ -9,11 +9,11 @@ import pandas as pd
 import numpy as np
 import os
 
-from modules.range_oscillator.core.utils import get_oscillator_data
+from modules.range_oscillator.utils.oscillator_data import get_oscillator_data
 from modules.common.utils import log_debug, log_analysis
 
 
-def generate_signals_strategy9_mean_reversion(
+def generate_signals_mean_reversion_strategy(
     high: Optional[pd.Series] = None,
     low: Optional[pd.Series] = None,
     close: Optional[pd.Series] = None,
@@ -195,6 +195,6 @@ def generate_signals_strategy9_mean_reversion(
 
 
 __all__ = [
-    "generate_signals_strategy9_mean_reversion",
+    "generate_signals_mean_reversion_strategy",
 ]
 

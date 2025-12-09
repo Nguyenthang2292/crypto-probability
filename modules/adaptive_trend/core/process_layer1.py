@@ -17,9 +17,9 @@ import pandas as pd
 
 from modules.common.utils import log_warn, log_error
 
-from .equity import equity_series
-from .signals import generate_signal_from_ma
-from .utils import rate_of_change
+from .compute_equity import equity_series
+from .signal_detection import generate_signal_from_ma
+from modules.adaptive_trend.utils import rate_of_change
 
 
 def weighted_signal(
@@ -148,7 +148,7 @@ def weighted_signal(
         raise
 
 
-def cut_signal(x: pd.Series, threshold: float = 0.49) -> pd.Series:
+def cut_signal(x: pd.Series, threshold: float = 0.49, cutout: int = 0) -> pd.Series:
     """Discretize continuous signal into {-1, 0, 1} based on threshold.
 
     Port of Pine Script function:
@@ -159,6 +159,7 @@ def cut_signal(x: pd.Series, threshold: float = 0.49) -> pd.Series:
     Args:
         x: Continuous signal series.
         threshold: Threshold for discretization (default: 0.49).
+        cutout: Number of bars to skip at beginning (force to 0).
             Values > threshold → 1, values < -threshold → -1, else → 0.
 
     Returns:
@@ -174,6 +175,9 @@ def cut_signal(x: pd.Series, threshold: float = 0.49) -> pd.Series:
     if threshold < 0:
         raise ValueError(f"threshold must be >= 0, got {threshold}")
     
+    if cutout < 0:
+        raise ValueError(f"cutout must be >= 0, got {cutout}")
+    
     if len(x) == 0:
         log_warn("Empty signal series provided, returning empty series")
         return pd.Series(dtype="int8", index=x.index)
@@ -187,6 +191,11 @@ def cut_signal(x: pd.Series, threshold: float = 0.49) -> pd.Series:
         if valid_mask.any():
             c.loc[valid_mask & (x > threshold)] = 1
             c.loc[valid_mask & (x < -threshold)] = -1
+        
+        # Enforce cutout: set first 'cutout' bars to 0
+        if cutout > 0 and cutout < len(c):
+            c.iloc[:cutout] = 0
+            # Also ensure NaN handling aligns if needed, though int8 has no NaN
         
         # Check for excessive NaN values
         nan_count = (~valid_mask).sum()

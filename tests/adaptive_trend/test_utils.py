@@ -110,12 +110,12 @@ def test_diflen_none_robustness():
 
 
 def test_diflen_invalid_robustness():
-    """Test that diflen defaults to Wide for invalid robustness."""
+    """Test that diflen defaults to Medium for invalid robustness."""
     length = 20
     result = diflen(length, robustness="Invalid")
-    result_wide = diflen(length, robustness="Wide")
+    result_medium = diflen(length, robustness="Medium")
     
-    assert result == result_wide
+    assert result == result_medium
 
 
 def test_exp_growth_basic():

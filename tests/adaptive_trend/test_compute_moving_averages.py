@@ -1,11 +1,11 @@
 """
-Tests for moving_averages module.
+Tests for compute_moving_averages module.
 """
 import numpy as np
 import pandas as pd
 import pytest
 
-from modules.adaptive_trend.moving_averages import (
+from modules.adaptive_trend.core.compute_moving_averages import (
     calculate_kama_atc,
     ma_calculation,
     set_of_moving_averages,
@@ -31,10 +31,9 @@ def test_calculate_kama_atc_empty_series():
 
 
 def test_calculate_kama_atc_none_input():
-    """Test that calculate_kama_atc handles None input."""
-    result = calculate_kama_atc(None)
-    
-    assert result is None
+    """Test that calculate_kama_atc raises error for None input."""
+    with pytest.raises(TypeError, match="prices must be a pandas Series"):
+        calculate_kama_atc(None)
 
 
 def test_calculate_kama_atc_insufficient_data():
@@ -131,10 +130,9 @@ def test_ma_calculation_empty_series():
 
 
 def test_ma_calculation_none_input():
-    """Test that ma_calculation handles None input."""
-    result = ma_calculation(None, length=10, ma_type="EMA")
-    
-    assert result is None
+    """Test that ma_calculation raises error for None input."""
+    with pytest.raises(TypeError, match="source must be a pandas Series"):
+        ma_calculation(None, length=10, ma_type="EMA")
 
 
 def test_set_of_moving_averages_basic():
@@ -209,10 +207,9 @@ def test_set_of_moving_averages_empty_series():
 
 
 def test_set_of_moving_averages_none_input():
-    """Test that set_of_moving_averages handles None input."""
-    result = set_of_moving_averages(20, None, "EMA")
-    
-    assert result is None
+    """Test that set_of_moving_averages raises error for None input."""
+    with pytest.raises(TypeError, match="source must be a pandas Series"):
+        set_of_moving_averages(20, None, "EMA")
 
 
 def test_set_of_moving_averages_all_ma_types():

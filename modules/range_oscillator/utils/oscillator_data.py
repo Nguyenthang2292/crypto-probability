@@ -1,5 +1,5 @@
 """
-Utility functions for Range Oscillator module.
+Oscillator data utility functions.
 
 This module provides helper functions for oscillator data handling.
 """

@@ -9,11 +9,11 @@ import pandas as pd
 import numpy as np
 import os
 
-from modules.range_oscillator.core.utils import get_oscillator_data
+from modules.range_oscillator.utils.oscillator_data import get_oscillator_data
 from modules.common.utils import log_debug, log_analysis
 
 
-def generate_signals_strategy3_crossover(
+def generate_signals_crossover_strategy(
     high: Optional[pd.Series] = None,
     low: Optional[pd.Series] = None,
     close: Optional[pd.Series] = None,
@@ -223,6 +223,6 @@ def generate_signals_strategy3_crossover(
 
 
 __all__ = [
-    "generate_signals_strategy3_crossover",
+    "generate_signals_crossover_strategy",
 ]
 

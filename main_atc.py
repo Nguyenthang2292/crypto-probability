@@ -10,6 +10,7 @@ Analyzes futures pairs on Binance using Adaptive Trend Classification:
 import warnings
 import sys
 from typing import Optional, Tuple
+import pandas as pd
 
 from modules.common.utils import configure_windows_stdio
 
@@ -35,8 +36,9 @@ from modules.common.utils import (
 )
 from modules.common.ExchangeManager import ExchangeManager
 from modules.common.DataFetcher import DataFetcher
-from modules.adaptive_trend.analyzer import analyze_symbol
-from modules.adaptive_trend.scanner import scan_all_symbols
+from modules.adaptive_trend.core.analyzer import analyze_symbol
+from modules.adaptive_trend.utils.config import create_atc_config_from_dict
+from modules.adaptive_trend.core.scanner import scan_all_symbols
 from modules.adaptive_trend.cli import (
     parse_args,
     prompt_interactive_mode,
@@ -136,28 +138,38 @@ class ATCAnalyzer:
             if self.args.max_symbols:
                 log_data(f"  Max Symbols: {self.args.max_symbols}")
     
-    def run_auto_mode(self) -> None:
-        """Run auto mode: scan all symbols for LONG/SHORT signals."""
-        self.display_auto_mode_config()
+    def run_auto_scan(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Run ATC auto scan and return results without displaying.
+        
+        This method is designed to be reusable by other analyzers that combine
+        ATC with other strategies (e.g., ATC + Range Oscillator).
+        
+        Returns:
+            Tuple of (long_signals_df, short_signals_df):
+            - long_signals_df: DataFrame with LONG signals
+            - short_signals_df: DataFrame with SHORT signals
+        """
+        # Get ATC parameters and create config
+        atc_params = self.get_atc_params()
+        atc_config = create_atc_config_from_dict(atc_params, timeframe=self.selected_timeframe)
 
         # Scan all symbols
         long_signals, short_signals = scan_all_symbols(
             data_fetcher=self.data_fetcher,
-            timeframe=self.selected_timeframe,
-            limit=self.args.limit,
-            ema_len=self.args.ema_len,
-            hma_len=self.args.hma_len,
-            wma_len=self.args.wma_len,
-            dema_len=self.args.dema_len,
-            lsma_len=self.args.lsma_len,
-            kama_len=self.args.kama_len,
-            robustness=self.args.robustness,
-            lambda_param=self.args.lambda_param,
-            decay=self.args.decay,
-            cutout=self.args.cutout,
+            atc_config=atc_config,
             max_symbols=self.args.max_symbols,
             min_signal=self.args.min_signal,
         )
+
+        return long_signals, short_signals
+    
+    def run_auto_mode(self) -> None:
+        """Run auto mode: scan all symbols for LONG/SHORT signals."""
+        self.display_auto_mode_config()
+
+        # Use run_auto_scan() for the actual scanning
+        long_signals, short_signals = self.run_auto_scan()
 
         # Display results
         display_scan_results(long_signals, short_signals, self.args.min_signal)
@@ -203,20 +215,30 @@ class ATCAnalyzer:
         symbol = self.get_symbol_input()
         self.display_manual_mode_config(symbol)
 
-        # Get ATC parameters
+        # Get ATC parameters and create config
         atc_params = self.get_atc_params()
+        atc_config = create_atc_config_from_dict(atc_params, timeframe=self.selected_timeframe)
 
         # Analyze symbol
-        success = analyze_symbol(
+        result = analyze_symbol(
             symbol=symbol,
             data_fetcher=self.data_fetcher,
-            timeframe=self.selected_timeframe,
-            **atc_params,
+            config=atc_config,
         )
 
-        if not success:
+        if result is None:
             log_error("Analysis failed")
             return
+
+        # Display results
+        from modules.adaptive_trend.cli.display import display_atc_signals
+        display_atc_signals(
+            symbol=result["symbol"],
+            df=result["df"],
+            atc_results=result["atc_results"],
+            current_price=result["current_price"],
+            exchange_label=result["exchange_label"],
+        )
 
         # Interactive loop if prompts enabled
         if not self.args.no_prompt:
@@ -249,15 +271,44 @@ class ATCAnalyzer:
                 )
 
                 symbol = normalize_symbol(symbol_input, quote)
+                
+                # Create ATCConfig
+                atc_config = create_atc_config_from_dict(atc_params, timeframe=self.selected_timeframe)
 
-                analyze_symbol(
+                result = analyze_symbol(
                     symbol=symbol,
                     data_fetcher=self.data_fetcher,
-                    timeframe=self.selected_timeframe,
-                    **atc_params,
+                    config=atc_config,
+                )
+
+                if result is None:
+                    log_error("Analysis failed")
+                    continue
+
+                # Display results
+                from modules.adaptive_trend.cli.display import display_atc_signals
+                display_atc_signals(
+                    symbol=result["symbol"],
+                    df=result["df"],
+                    atc_results=result["atc_results"],
+                    current_price=result["current_price"],
+                    exchange_label=result["exchange_label"],
                 )
         except KeyboardInterrupt:
             print(color_text("\nExiting program by user request.", Fore.YELLOW))
+
+
+def initialize_components() -> Tuple[ExchangeManager, DataFetcher]:
+    """
+    Initialize ExchangeManager and DataFetcher components.
+    
+    Returns:
+        Tuple of (ExchangeManager, DataFetcher) instances
+    """
+    log_progress("Initializing components...")
+    exchange_manager = ExchangeManager()
+    data_fetcher = DataFetcher(exchange_manager)
+    return exchange_manager, data_fetcher
 
 
 def main() -> None:
@@ -275,15 +326,12 @@ def main() -> None:
 
     # List symbols if requested
     if args.list_symbols:
-        exchange_manager = ExchangeManager()
-        data_fetcher = DataFetcher(exchange_manager)
+        exchange_manager, data_fetcher = initialize_components()
         list_futures_symbols(data_fetcher)
         return
 
     # Initialize components
-    log_progress("Initializing components...")
-    exchange_manager = ExchangeManager()
-    data_fetcher = DataFetcher(exchange_manager)
+    exchange_manager, data_fetcher = initialize_components()
 
     # Create analyzer instance
     analyzer = ATCAnalyzer(args, data_fetcher)
@@ -299,5 +347,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(color_text("\nExiting program by user request.", Fore.YELLOW))
+        sys.exit(0)
+    except Exception as e:
+        log_error(f"Error: {type(e).__name__}: {e}")
+        import traceback
+        log_error(f"Traceback: {traceback.format_exc()}")
+        sys.exit(1)
 

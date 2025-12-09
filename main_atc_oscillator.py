@@ -10,7 +10,7 @@ This program combines signals from Adaptive Trend Classification (ATC) and Range
 import warnings
 import sys
 import threading
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 
@@ -31,16 +31,18 @@ from modules.common.utils import (
 )
 from modules.common.ExchangeManager import ExchangeManager
 from modules.common.DataFetcher import DataFetcher
-from modules.adaptive_trend.scanner import scan_all_symbols
 from modules.adaptive_trend.cli import prompt_timeframe
+from main_atc import ATCAnalyzer
 from modules.range_oscillator.cli import (
     parse_args,
     display_configuration,
     display_final_results,
 )
-from modules.range_oscillator.strategies.combined import (
-    generate_signals_strategy5_combined,
-    Strategy5Config,
+from modules.range_oscillator.analysis.combined import (
+    generate_signals_combined_all_strategy,
+)
+from modules.range_oscillator.config import (
+    CombinedStrategyConfig,
     ConsensusConfig,
     DynamicSelectionConfig,
 )
@@ -109,7 +111,7 @@ def get_range_oscillator_signal(
 
         # Use Strategy 5 Combined with Dynamic Selection and Adaptive Weights
         # Create config object for cleaner code
-        config = Strategy5Config()
+        config = CombinedStrategyConfig()
         config.enabled_strategies = enabled_strategies
         config.return_confidence_score = True
         
@@ -124,7 +126,7 @@ def get_range_oscillator_signal(
         config.consensus.adaptive_weights = True
         config.consensus.performance_window = 10
         
-        result = generate_signals_strategy5_combined(
+        result = generate_signals_combined_all_strategy(
             high=high,
             low=low,
             close=close,
@@ -155,7 +157,20 @@ def get_range_oscillator_signal(
 
     except Exception as e:
         # Skip symbols with errors
-        return None
+            return None
+
+
+def initialize_components() -> Tuple[ExchangeManager, DataFetcher]:
+    """
+    Initialize ExchangeManager and DataFetcher components.
+    
+    Returns:
+        Tuple of (ExchangeManager, DataFetcher) instances
+    """
+    log_progress("Initializing components...")
+    exchange_manager = ExchangeManager()
+    data_fetcher = DataFetcher(exchange_manager)
+    return exchange_manager, data_fetcher
 
 
 class ATCOscillatorAnalyzer:
@@ -166,6 +181,9 @@ class ATCOscillatorAnalyzer:
     1. Runs ATC auto scan to find LONG/SHORT signals
     2. Filters symbols by checking if Range Oscillator signals match ATC signals
     3. Returns final list of symbols with confirmed signals from both indicators
+    
+    This class uses ATCAnalyzer through composition to reuse ATC analysis logic,
+    making it easy to extend with other strategies in the future (e.g., ATC + OtherStrategy).
     """
     
     def __init__(self, args, data_fetcher: DataFetcher):
@@ -178,7 +196,16 @@ class ATCOscillatorAnalyzer:
         """
         self.args = args
         self.data_fetcher = data_fetcher
+        
+        # Use ATCAnalyzer for ATC-related operations (composition pattern)
+        # This allows reuse of ATC logic and makes it easy to extend with other strategies
+        self.atc_analyzer = ATCAnalyzer(args, data_fetcher)
+        
+        # Update timeframe in ATCAnalyzer to match our selected timeframe
         self.selected_timeframe = args.timeframe
+        self.atc_analyzer.selected_timeframe = args.timeframe
+        
+        # Results storage
         self.long_signals_atc = pd.DataFrame()
         self.short_signals_atc = pd.DataFrame()
         self.long_signals_confirmed = pd.DataFrame()
@@ -201,25 +228,14 @@ class ATCOscillatorAnalyzer:
             self.selected_timeframe = prompt_timeframe(default_timeframe=self.selected_timeframe)
             print(color_text(f"\nSelected timeframe for ATC analysis: {self.selected_timeframe}", Fore.GREEN))
         
+        # Sync timeframe with ATCAnalyzer
+        self.atc_analyzer.selected_timeframe = self.selected_timeframe
+        
         return self.selected_timeframe
     
     def get_atc_params(self) -> dict:
-        """Extract ATC parameters from arguments."""
-        return {
-            "limit": self.args.limit,
-            "ema_len": self.args.ema_len,
-            "hma_len": self.args.hma_len,
-            "wma_len": self.args.wma_len,
-            "dema_len": self.args.dema_len,
-            "lsma_len": self.args.lsma_len,
-            "kama_len": self.args.kama_len,
-            "robustness": self.args.robustness,
-            "lambda_param": self.args.lambda_param,
-            "decay": self.args.decay,
-            "cutout": self.args.cutout,
-            "max_symbols": self.args.max_symbols,
-            "min_signal": self.args.min_signal,
-        }
+        """Extract ATC parameters from arguments using ATCAnalyzer."""
+        return self.atc_analyzer.get_atc_params()
     
     def get_oscillator_params(self) -> dict:
         """Extract Range Oscillator parameters from arguments."""
@@ -243,17 +259,13 @@ class ATCOscillatorAnalyzer:
         )
     
     def run_atc_scan(self) -> None:
-        """Run ATC auto scan to get LONG/SHORT signals."""
+        """Run ATC auto scan to get LONG/SHORT signals using ATCAnalyzer."""
         log_progress("\nStep 1: Running ATC auto scan...")
         log_progress("=" * 80)
         
-        atc_params = self.get_atc_params()
-        
-        self.long_signals_atc, self.short_signals_atc = scan_all_symbols(
-            data_fetcher=self.data_fetcher,
-            timeframe=self.selected_timeframe,
-            **atc_params,
-        )
+        # Use ATCAnalyzer's run_auto_scan() method to get scan results
+        # This reuses the ATC logic and makes the code more maintainable
+        self.long_signals_atc, self.short_signals_atc = self.atc_analyzer.run_auto_scan()
         
         original_long_count = len(self.long_signals_atc)
         original_short_count = len(self.short_signals_atc)
@@ -534,9 +546,7 @@ def main() -> None:
     args = parse_args()
     
     # Initialize components
-    log_progress("Initializing components...")
-    exchange_manager = ExchangeManager()
-    data_fetcher = DataFetcher(exchange_manager)
+    exchange_manager, data_fetcher = initialize_components()
     
     # Create analyzer instance
     analyzer = ATCOscillatorAnalyzer(args, data_fetcher)

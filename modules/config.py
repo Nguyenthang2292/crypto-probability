@@ -616,3 +616,24 @@ PAIRS_TRADING_PAIR_COLUMNS = [
     'kalman_classification_recall',
     'kalman_classification_accuracy',
 ]
+
+
+# ============================================================================
+# RANGE OSCILLATOR CONFIGURATION
+# ============================================================================
+
+# Strategy categories for dynamic selection
+TRENDING_STRATEGIES = [3, 4, 6, 8]
+RANGE_BOUND_STRATEGIES = [2, 7, 9]
+VOLATILE_STRATEGIES = [6, 7]
+STABLE_STRATEGIES = [2, 3, 9]
+
+# Constants for performance scoring weights
+AGREEMENT_WEIGHT = 0.6
+STRENGTH_WEIGHT = 0.4
+
+# Normalization constant for oscillator extreme calculation
+OSCILLATOR_NORMALIZATION = 100.0
+
+# Valid strategy IDs
+VALID_STRATEGY_IDS = {2, 3, 4, 6, 7, 8, 9}

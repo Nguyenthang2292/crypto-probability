@@ -16,7 +16,9 @@ import pandas as pd
 
 try:
     from numba import njit
+    _HAS_NUMBA = True
 except ImportError:
+    _HAS_NUMBA = False
     # Fallback if numba is not installed
     def njit(*args, **kwargs):
         """No-op decorator when numba is not available."""
@@ -26,7 +28,13 @@ except ImportError:
 
 from modules.common.utils import log_warn, log_error
 
-from .utils import exp_growth
+if not _HAS_NUMBA:
+    try:
+        log_warn("Numba not installed. Performance will be degraded. Please install numba.")
+    except Exception:
+        print("[WARN] Numba not installed. Performance will be degraded.")
+
+from modules.adaptive_trend.utils import exp_growth
 
 
 @njit(cache=True)

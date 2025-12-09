@@ -1,11 +1,11 @@
 """
-Tests for layer1 module.
+Tests for process_layer1 module.
 """
 import numpy as np
 import pandas as pd
 import pytest
 
-from modules.adaptive_trend.layer1 import (
+from modules.adaptive_trend.core.process_layer1 import (
     weighted_signal,
     cut_signal,
     trend_sign,
@@ -37,7 +37,7 @@ def test_weighted_signal_different_list_lengths():
     weights = [pd.Series([1.0, 2.0])]  # Only one weight, but two signals
     
     # weighted_signal checks length of signals list vs weights list
-    with pytest.raises(ValueError, match="cùng độ dài"):
+    with pytest.raises(ValueError, match="must have the same length"):
         weighted_signal(signals, weights)
 
 

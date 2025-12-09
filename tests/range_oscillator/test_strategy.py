@@ -6,14 +6,14 @@ import pandas as pd
 import pytest
 
 from modules.range_oscillator.strategies.basic import generate_signals_basic_strategy
-from modules.range_oscillator.strategies.sustained import generate_signals_strategy2_sustained
-from modules.range_oscillator.strategies.crossover import generate_signals_strategy3_crossover
-from modules.range_oscillator.strategies.momentum import generate_signals_strategy4_momentum
-from modules.range_oscillator.strategies.combined import generate_signals_strategy5_combined
+from modules.range_oscillator.strategies.sustained import generate_signals_sustained_strategy
+from modules.range_oscillator.strategies.crossover import generate_signals_crossover_strategy
+from modules.range_oscillator.strategies.momentum import generate_signals_momentum_strategy
+from modules.range_oscillator.analysis.combined import generate_signals_combined_all_strategy
 from modules.range_oscillator.strategies.breakout import generate_signals_breakout_strategy
-from modules.range_oscillator.strategies.divergence import generate_signals_strategy7_divergence
-from modules.range_oscillator.strategies.trend_following import generate_signals_strategy8_trend_following
-from modules.range_oscillator.strategies.mean_reversion import generate_signals_strategy9_mean_reversion
+from modules.range_oscillator.strategies.divergence import generate_signals_divergence_strategy
+from modules.range_oscillator.strategies.trend_following import generate_signals_trend_following_strategy
+from modules.range_oscillator.strategies.mean_reversion import generate_signals_mean_reversion_strategy
 from modules.range_oscillator.analysis.summary import get_signal_summary
 
 
@@ -300,7 +300,7 @@ class TestStrategy2:
         """Test basic Strategy 2 functionality."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy2_sustained(
+        signals, strength = generate_signals_sustained_strategy(
             high=high, low=low, close=close,
             min_bars_above_zero=3,
             min_bars_below_zero=3
@@ -316,7 +316,7 @@ class TestStrategy2:
         high, low, close = sample_ohlc_data
         oscillator, ma, range_atr = sample_oscillator_data
         
-        signals, strength = generate_signals_strategy2_sustained(
+        signals, strength = generate_signals_sustained_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             min_bars_above_zero=5
         )
@@ -330,20 +330,20 @@ class TestStrategy2:
         
         # Test min_bars_above_zero <= 0
         with pytest.raises(ValueError, match="min_bars_above_zero must be > 0"):
-            generate_signals_strategy2_sustained(
+            generate_signals_sustained_strategy(
                 high=high, low=low, close=close,
                 min_bars_above_zero=0
             )
         
         with pytest.raises(ValueError, match="min_bars_above_zero must be > 0"):
-            generate_signals_strategy2_sustained(
+            generate_signals_sustained_strategy(
                 high=high, low=low, close=close,
                 min_bars_above_zero=-1
             )
         
         # Test min_bars_below_zero <= 0
         with pytest.raises(ValueError, match="min_bars_below_zero must be > 0"):
-            generate_signals_strategy2_sustained(
+            generate_signals_sustained_strategy(
                 high=high, low=low, close=close,
                 min_bars_below_zero=0
             )
@@ -357,7 +357,7 @@ class TestStrategy2:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy2_sustained(
+        signals, strength = generate_signals_sustained_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             min_bars_above_zero=3,
             min_bars_below_zero=3,
@@ -378,7 +378,7 @@ class TestStrategy2:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy2_sustained(
+        signals, strength = generate_signals_sustained_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             min_bars_above_zero=3,
             min_bars_below_zero=3,
@@ -399,7 +399,7 @@ class TestStrategy2:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy2_sustained(
+        signals, strength = generate_signals_sustained_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             min_bars_above_zero=3,
             min_bars_below_zero=3,
@@ -425,7 +425,7 @@ class TestStrategy2:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy2_sustained(
+        signals, strength = generate_signals_sustained_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             min_bars_above_zero=3,
             min_bars_below_zero=3,
@@ -458,7 +458,7 @@ class TestStrategy2:
         oscillator_with_nan = oscillator.copy()
         oscillator_with_nan.iloc[5] = np.nan
         
-        signals, strength = generate_signals_strategy2_sustained(
+        signals, strength = generate_signals_sustained_strategy(
             oscillator=oscillator_with_nan, ma=ma, range_atr=range_atr,
             min_bars_above_zero=3,
             min_bars_below_zero=3,
@@ -480,7 +480,7 @@ class TestStrategy2:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy2_sustained(
+        signals, strength = generate_signals_sustained_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             min_bars_above_zero=3,
             min_bars_below_zero=3,
@@ -502,7 +502,7 @@ class TestStrategy3:
         """Test basic Strategy 3 functionality."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy3_crossover(
+        signals, strength = generate_signals_crossover_strategy(
             high=high, low=low, close=close,
             confirmation_bars=2
         )
@@ -517,7 +517,7 @@ class TestStrategy3:
         high, low, close = sample_ohlc_data
         oscillator, ma, range_atr = sample_oscillator_data
         
-        signals, strength = generate_signals_strategy3_crossover(
+        signals, strength = generate_signals_crossover_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             confirmation_bars=3
         )
@@ -530,7 +530,7 @@ class TestStrategy3:
         high, low, close = sample_ohlc_data
         
         with pytest.raises(ValueError, match="confirmation_bars must be > 0"):
-            generate_signals_strategy3_crossover(
+            generate_signals_crossover_strategy(
                 high=high, low=low, close=close,
                 confirmation_bars=0
             )
@@ -545,7 +545,7 @@ class TestStrategy3:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy3_crossover(
+        signals, strength = generate_signals_crossover_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             confirmation_bars=2,
             oscillator_threshold=0.0
@@ -565,7 +565,7 @@ class TestStrategy3:
         ma = pd.Series([50000.0] * 15, index=dates)
         range_atr = pd.Series([1000.0] * 15, index=dates)
         
-        signals, strength = generate_signals_strategy3_crossover(
+        signals, strength = generate_signals_crossover_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             confirmation_bars=3,
             oscillator_threshold=0.0
@@ -583,7 +583,7 @@ class TestStrategy4:
         """Test basic Strategy 4 functionality."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy4_momentum(
+        signals, strength = generate_signals_momentum_strategy(
             high=high, low=low, close=close,
             momentum_period=3,
             momentum_threshold=5.0
@@ -599,7 +599,7 @@ class TestStrategy4:
         high, low, close = sample_ohlc_data
         oscillator, ma, range_atr = sample_oscillator_data
         
-        signals, strength = generate_signals_strategy4_momentum(
+        signals, strength = generate_signals_momentum_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             momentum_period=5
         )
@@ -612,13 +612,13 @@ class TestStrategy4:
         high, low, close = sample_ohlc_data
         
         with pytest.raises(ValueError, match="momentum_period must be > 0"):
-            generate_signals_strategy4_momentum(
+            generate_signals_momentum_strategy(
                 high=high, low=low, close=close,
                 momentum_period=0
             )
         
         with pytest.raises(ValueError, match="momentum_threshold must be >= 0"):
-            generate_signals_strategy4_momentum(
+            generate_signals_momentum_strategy(
                 high=high, low=low, close=close,
                 momentum_threshold=-1.0
             )
@@ -633,7 +633,7 @@ class TestStrategy4:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy4_momentum(
+        signals, strength = generate_signals_momentum_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             momentum_period=3,
             momentum_threshold=5.0
@@ -651,7 +651,7 @@ class TestStrategy4:
         range_atr = pd.Series([1000.0] * 5, index=dates)
         
         with pytest.raises(ValueError, match="momentum_period.*must be < data length"):
-            generate_signals_strategy4_momentum(
+            generate_signals_momentum_strategy(
                 oscillator=oscillator, ma=ma, range_atr=range_atr,
                 momentum_period=10
             )
@@ -664,7 +664,7 @@ class TestStrategy5:
         """Test basic Strategy 5 functionality."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             high=high, low=low, close=close,
             use_sustained=True,
             use_crossover=True,
@@ -681,7 +681,7 @@ class TestStrategy5:
         high, low, close = sample_ohlc_data
         oscillator, ma, range_atr = sample_oscillator_data
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=True,
             use_crossover=False,
@@ -695,7 +695,7 @@ class TestStrategy5:
         """Test Strategy 5 fallback when no methods enabled."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             high=high, low=low, close=close,
             use_sustained=False,
             use_crossover=False,
@@ -710,14 +710,14 @@ class TestStrategy5:
         high, low, close = sample_ohlc_data
         
         with pytest.raises(ValueError, match="min_bars_sustained must be > 0"):
-            generate_signals_strategy5_combined(
+            generate_signals_combined_all_strategy(
                 high=high, low=low, close=close,
                 use_sustained=True,
                 min_bars_sustained=0
             )
         
         with pytest.raises(ValueError, match="confirmation_bars must be > 0"):
-            generate_signals_strategy5_combined(
+            generate_signals_combined_all_strategy(
                 high=high, low=low, close=close,
                 use_crossover=True,
                 confirmation_bars=0
@@ -730,7 +730,7 @@ class TestStrategy5:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=True,
             use_crossover=True,
@@ -761,7 +761,7 @@ class TestStrategy5Integration:
         
         # Create scenario where sustained and crossover vote LONG, momentum votes SHORT
         # Use parameters that favor different outcomes
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=True,
             use_crossover=True,
@@ -784,7 +784,7 @@ class TestStrategy5Integration:
         oscillator, ma, range_atr = sample_data_for_voting
         
         # Test with 2 methods enabled (can create ties)
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=True,
             use_crossover=True,
@@ -803,7 +803,7 @@ class TestStrategy5Integration:
         """Test with all 3 methods enabled."""
         oscillator, ma, range_atr = sample_data_for_voting
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=True,
             use_crossover=True,
@@ -820,7 +820,7 @@ class TestStrategy5Integration:
         """Test Strategy 5 with only sustained method enabled."""
         oscillator, ma, range_atr = sample_data_for_voting
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=True,
             use_crossover=False,
@@ -837,7 +837,7 @@ class TestStrategy5Integration:
         """Test Strategy 5 with only crossover method enabled."""
         oscillator, ma, range_atr = sample_data_for_voting
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=False,
             use_crossover=True,
@@ -854,7 +854,7 @@ class TestStrategy5Integration:
         """Test Strategy 5 with only momentum method enabled."""
         oscillator, ma, range_atr = sample_data_for_voting
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=False,
             use_crossover=False,
@@ -871,7 +871,7 @@ class TestStrategy5Integration:
         """Test Strategy 5 with sustained and crossover methods enabled."""
         oscillator, ma, range_atr = sample_data_for_voting
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=True,
             use_crossover=True,
@@ -888,7 +888,7 @@ class TestStrategy5Integration:
         """Test Strategy 5 with sustained and momentum methods enabled."""
         oscillator, ma, range_atr = sample_data_for_voting
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=True,
             use_crossover=False,
@@ -905,7 +905,7 @@ class TestStrategy5Integration:
         """Test Strategy 5 with crossover and momentum methods enabled."""
         oscillator, ma, range_atr = sample_data_for_voting
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=False,
             use_crossover=True,
@@ -922,7 +922,7 @@ class TestStrategy5Integration:
         """Test that strength is calculated as average of voting strategies."""
         oscillator, ma, range_atr = sample_data_for_voting
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             use_sustained=True,
             use_crossover=True,
@@ -946,7 +946,7 @@ class TestStrategy5Integration:
         ma = pd.Series([50000.0] * 30, index=dates)
         range_atr = pd.Series([1000.0] * 30, index=dates)
         
-        signals1, strength1 = generate_signals_strategy5_combined(
+        signals1, strength1 = generate_signals_combined_all_strategy(
             oscillator=oscillator_long, ma=ma, range_atr=range_atr,
             use_sustained=True,
             use_crossover=True,
@@ -964,7 +964,7 @@ class TestStrategy5Integration:
         # Scenario 2: All strategies should vote SHORT
         oscillator_short = pd.Series([-50.0] * 30, index=dates)
         
-        signals2, strength2 = generate_signals_strategy5_combined(
+        signals2, strength2 = generate_signals_combined_all_strategy(
             oscillator=oscillator_short, ma=ma, range_atr=range_atr,
             use_sustained=True,
             use_crossover=True,
@@ -983,7 +983,7 @@ class TestStrategy5Integration:
         """Test that Strategy 5 falls back to Strategy 1 when no methods enabled."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             high=high, low=low, close=close,
             use_sustained=False,
             use_crossover=False,
@@ -1117,7 +1117,7 @@ class TestStrategy7:
         """Test basic Strategy 7 functionality."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy7_divergence(
+        signals, strength = generate_signals_divergence_strategy(
             high=high, low=low, close=close,
             lookback_period=30,
             min_swing_bars=5
@@ -1133,7 +1133,7 @@ class TestStrategy7:
         oscillator, ma, range_atr = sample_oscillator_data
         
         with pytest.raises(ValueError, match="high, low, close are required"):
-            generate_signals_strategy7_divergence(
+            generate_signals_divergence_strategy(
                 oscillator=oscillator, ma=ma, range_atr=range_atr
             )
     
@@ -1142,19 +1142,19 @@ class TestStrategy7:
         high, low, close = sample_ohlc_data
         
         with pytest.raises(ValueError, match="min_swing_bars must be > 0"):
-            generate_signals_strategy7_divergence(
+            generate_signals_divergence_strategy(
                 high=high, low=low, close=close,
                 min_swing_bars=0
             )
         
         with pytest.raises(ValueError, match="lookback_period must be > 0"):
-            generate_signals_strategy7_divergence(
+            generate_signals_divergence_strategy(
                 high=high, low=low, close=close,
                 lookback_period=0
             )
         
         with pytest.raises(ValueError, match="min_divergence_strength must be >= 0"):
-            generate_signals_strategy7_divergence(
+            generate_signals_divergence_strategy(
                 high=high, low=low, close=close,
                 min_divergence_strength=-1.0
             )
@@ -1176,7 +1176,7 @@ class TestStrategy7:
         ma = pd.Series([price_base] * 100, index=dates)
         range_atr = pd.Series([1000.0] * 100, index=dates)
         
-        signals, strength = generate_signals_strategy7_divergence(
+        signals, strength = generate_signals_divergence_strategy(
             high=high, low=low, close=close,
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             lookback_period=30,
@@ -1195,7 +1195,7 @@ class TestStrategy8:
         """Test basic Strategy 8 functionality."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy8_trend_following(
+        signals, strength = generate_signals_trend_following_strategy(
             high=high, low=low, close=close,
             trend_filter_period=10,
             oscillator_threshold=20.0
@@ -1211,7 +1211,7 @@ class TestStrategy8:
         high, low, close = sample_ohlc_data
         oscillator, ma, range_atr = sample_oscillator_data
         
-        signals, strength = generate_signals_strategy8_trend_following(
+        signals, strength = generate_signals_trend_following_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             require_consistency=False
         )
@@ -1224,13 +1224,13 @@ class TestStrategy8:
         high, low, close = sample_ohlc_data
         
         with pytest.raises(ValueError, match="trend_filter_period must be > 0"):
-            generate_signals_strategy8_trend_following(
+            generate_signals_trend_following_strategy(
                 high=high, low=low, close=close,
                 trend_filter_period=0
             )
         
         with pytest.raises(ValueError, match="oscillator_threshold must be >= 0"):
-            generate_signals_strategy8_trend_following(
+            generate_signals_trend_following_strategy(
                 high=high, low=low, close=close,
                 oscillator_threshold=-1.0
             )
@@ -1245,7 +1245,7 @@ class TestStrategy8:
         ma = pd.Series([50000.0] * 30, index=dates)
         range_atr = pd.Series([1000.0] * 30, index=dates)
         
-        signals, strength = generate_signals_strategy8_trend_following(
+        signals, strength = generate_signals_trend_following_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             trend_filter_period=10,
             oscillator_threshold=20.0,
@@ -1263,7 +1263,7 @@ class TestStrategy9:
         """Test basic Strategy 9 functionality."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy9_mean_reversion(
+        signals, strength = generate_signals_mean_reversion_strategy(
             high=high, low=low, close=close,
             extreme_threshold=80.0,
             zero_cross_threshold=10.0
@@ -1279,7 +1279,7 @@ class TestStrategy9:
         high, low, close = sample_ohlc_data
         oscillator, ma, range_atr = sample_oscillator_data
         
-        signals, strength = generate_signals_strategy9_mean_reversion(
+        signals, strength = generate_signals_mean_reversion_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             min_extreme_bars=3
         )
@@ -1292,25 +1292,25 @@ class TestStrategy9:
         high, low, close = sample_ohlc_data
         
         with pytest.raises(ValueError, match="extreme_threshold must be >= 0"):
-            generate_signals_strategy9_mean_reversion(
+            generate_signals_mean_reversion_strategy(
                 high=high, low=low, close=close,
                 extreme_threshold=-1.0
             )
         
         with pytest.raises(ValueError, match="zero_cross_threshold must be >= 0"):
-            generate_signals_strategy9_mean_reversion(
+            generate_signals_mean_reversion_strategy(
                 high=high, low=low, close=close,
                 zero_cross_threshold=-1.0
             )
         
         with pytest.raises(ValueError, match="min_extreme_bars must be > 0"):
-            generate_signals_strategy9_mean_reversion(
+            generate_signals_mean_reversion_strategy(
                 high=high, low=low, close=close,
                 min_extreme_bars=0
             )
         
         with pytest.raises(ValueError, match="transition_bars must be > 0"):
-            generate_signals_strategy9_mean_reversion(
+            generate_signals_mean_reversion_strategy(
                 high=high, low=low, close=close,
                 transition_bars=0
             )
@@ -1325,7 +1325,7 @@ class TestStrategy9:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy9_mean_reversion(
+        signals, strength = generate_signals_mean_reversion_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             extreme_threshold=80.0,
             zero_cross_threshold=10.0,
@@ -1452,7 +1452,7 @@ class TestConflictHandling:
         """Test Strategy 2 handles conflicts."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy2_sustained(
+        signals, strength = generate_signals_sustained_strategy(
             high=high, low=low, close=close
         )
         
@@ -1463,7 +1463,7 @@ class TestConflictHandling:
         """Test Strategy 3 handles conflicts."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy3_crossover(
+        signals, strength = generate_signals_crossover_strategy(
             high=high, low=low, close=close
         )
         
@@ -1474,7 +1474,7 @@ class TestConflictHandling:
         """Test Strategy 4 handles conflicts."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy4_momentum(
+        signals, strength = generate_signals_momentum_strategy(
             high=high, low=low, close=close
         )
         
@@ -1485,7 +1485,7 @@ class TestConflictHandling:
         """Test Strategy 5 handles conflicts."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             high=high, low=low, close=close
         )
         
@@ -1507,7 +1507,7 @@ class TestConflictHandling:
         """Test Strategy 7 handles conflicts."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy7_divergence(
+        signals, strength = generate_signals_divergence_strategy(
             high=high, low=low, close=close
         )
         
@@ -1518,7 +1518,7 @@ class TestConflictHandling:
         """Test Strategy 8 handles conflicts."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy8_trend_following(
+        signals, strength = generate_signals_trend_following_strategy(
             high=high, low=low, close=close
         )
         
@@ -1529,7 +1529,7 @@ class TestConflictHandling:
         """Test Strategy 9 handles conflicts."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy9_mean_reversion(
+        signals, strength = generate_signals_mean_reversion_strategy(
             high=high, low=low, close=close
         )
         
@@ -1566,7 +1566,7 @@ class TestNaNHandling:
         ma = close.rolling(50).mean()
         range_atr = pd.Series(np.ones(len(close)) * 1000, index=close.index)
         
-        signals, strength = generate_signals_strategy2_sustained(
+        signals, strength = generate_signals_sustained_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr
         )
         
@@ -1581,7 +1581,7 @@ class TestNaNHandling:
         ma = close.rolling(50).mean()
         range_atr = pd.Series(np.ones(len(close)) * 1000, index=close.index)
         
-        signals, strength = generate_signals_strategy3_crossover(
+        signals, strength = generate_signals_crossover_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr
         )
         
@@ -1596,7 +1596,7 @@ class TestNaNHandling:
         ma = close.rolling(50).mean()
         range_atr = pd.Series(np.ones(len(close)) * 1000, index=close.index)
         
-        signals, strength = generate_signals_strategy4_momentum(
+        signals, strength = generate_signals_momentum_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr
         )
         
@@ -1611,7 +1611,7 @@ class TestNaNHandling:
         ma = close.rolling(50).mean()
         range_atr = pd.Series(np.ones(len(close)) * 1000, index=close.index)
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr
         )
         
@@ -1639,7 +1639,7 @@ class TestNaNHandling:
         close_with_nan = close.copy()
         close_with_nan.iloc[50:60] = np.nan
         
-        signals, strength = generate_signals_strategy7_divergence(
+        signals, strength = generate_signals_divergence_strategy(
             high=high, low=low, close=close_with_nan
         )
         
@@ -1654,7 +1654,7 @@ class TestNaNHandling:
         ma = close.rolling(50).mean()
         range_atr = pd.Series(np.ones(len(close)) * 1000, index=close.index)
         
-        signals, strength = generate_signals_strategy8_trend_following(
+        signals, strength = generate_signals_trend_following_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr
         )
         
@@ -1669,7 +1669,7 @@ class TestNaNHandling:
         ma = close.rolling(50).mean()
         range_atr = pd.Series(np.ones(len(close)) * 1000, index=close.index)
         
-        signals, strength = generate_signals_strategy9_mean_reversion(
+        signals, strength = generate_signals_mean_reversion_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr
         )
         
@@ -1691,7 +1691,7 @@ class TestLookAheadBiasPrevention:
         ma = pd.Series([50000.0] * 20, index=dates)
         range_atr = pd.Series([1000.0] * 20, index=dates)
         
-        signals, strength = generate_signals_strategy3_crossover(
+        signals, strength = generate_signals_crossover_strategy(
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             confirmation_bars=2,
             oscillator_threshold=0.0
@@ -1742,7 +1742,7 @@ class TestLookAheadBiasPrevention:
         ma = pd.Series([price_base] * 100, index=dates)
         range_atr = pd.Series([1000.0] * 100, index=dates)
         
-        signals, strength = generate_signals_strategy7_divergence(
+        signals, strength = generate_signals_divergence_strategy(
             high=high, low=low, close=close,
             oscillator=oscillator, ma=ma, range_atr=range_atr,
             lookback_period=30,
@@ -1777,7 +1777,7 @@ class TestSignalStrengthCalculation:
         """Test Strategy 2 signal strength."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy2_sustained(
+        signals, strength = generate_signals_sustained_strategy(
             high=high, low=low, close=close
         )
         
@@ -1789,7 +1789,7 @@ class TestSignalStrengthCalculation:
         """Test Strategy 3 signal strength."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy3_crossover(
+        signals, strength = generate_signals_crossover_strategy(
             high=high, low=low, close=close
         )
         
@@ -1801,7 +1801,7 @@ class TestSignalStrengthCalculation:
         """Test Strategy 4 signal strength."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy4_momentum(
+        signals, strength = generate_signals_momentum_strategy(
             high=high, low=low, close=close
         )
         
@@ -1813,7 +1813,7 @@ class TestSignalStrengthCalculation:
         """Test Strategy 5 signal strength."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy5_combined(
+        signals, strength = generate_signals_combined_all_strategy(
             high=high, low=low, close=close
         )
         
@@ -1837,7 +1837,7 @@ class TestSignalStrengthCalculation:
         """Test Strategy 7 signal strength."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy7_divergence(
+        signals, strength = generate_signals_divergence_strategy(
             high=high, low=low, close=close
         )
         
@@ -1849,7 +1849,7 @@ class TestSignalStrengthCalculation:
         """Test Strategy 8 signal strength."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy8_trend_following(
+        signals, strength = generate_signals_trend_following_strategy(
             high=high, low=low, close=close
         )
         
@@ -1861,7 +1861,7 @@ class TestSignalStrengthCalculation:
         """Test Strategy 9 signal strength."""
         high, low, close = sample_ohlc_data
         
-        signals, strength = generate_signals_strategy9_mean_reversion(
+        signals, strength = generate_signals_mean_reversion_strategy(
             high=high, low=low, close=close
         )
         

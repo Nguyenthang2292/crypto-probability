@@ -16,29 +16,44 @@ from typing import Optional, Tuple, Dict, List, Literal, Any, Union
 import pandas as pd
 import numpy as np
 import os
-from dataclasses import dataclass, field
 
-from modules.range_oscillator.core.utils import get_oscillator_data
+from modules.range_oscillator.utils.oscillator_data import get_oscillator_data
+from modules.range_oscillator.config import (
+    DynamicSelectionConfig,
+    ConsensusConfig,
+    StrategySpecificConfig,
+    CombinedStrategyConfig,
+)
 from modules.range_oscillator.strategies.basic import generate_signals_basic_strategy
-from modules.range_oscillator.strategies.sustained import generate_signals_strategy2_sustained
-from modules.range_oscillator.strategies.crossover import generate_signals_strategy3_crossover
-from modules.range_oscillator.strategies.momentum import generate_signals_strategy4_momentum
+from modules.range_oscillator.strategies.sustained import generate_signals_sustained_strategy
+from modules.range_oscillator.strategies.crossover import generate_signals_crossover_strategy
+from modules.range_oscillator.strategies.momentum import generate_signals_momentum_strategy
 from modules.range_oscillator.strategies.breakout import generate_signals_breakout_strategy
-from modules.range_oscillator.strategies.divergence import generate_signals_strategy7_divergence
-from modules.range_oscillator.strategies.trend_following import generate_signals_strategy8_trend_following
-from modules.range_oscillator.strategies.mean_reversion import generate_signals_strategy9_mean_reversion
+from modules.range_oscillator.strategies.divergence import generate_signals_divergence_strategy
+from modules.range_oscillator.strategies.trend_following import generate_signals_trend_following_strategy
+from modules.range_oscillator.strategies.mean_reversion import generate_signals_mean_reversion_strategy
 from modules.common.utils import log_debug, log_analysis, log_warn
+from modules.config import (
+    TRENDING_STRATEGIES,
+    RANGE_BOUND_STRATEGIES,
+    VOLATILE_STRATEGIES,
+    STABLE_STRATEGIES,
+    AGREEMENT_WEIGHT,
+    STRENGTH_WEIGHT,
+    OSCILLATOR_NORMALIZATION,
+    VALID_STRATEGY_IDS,
+)
 
 
 # Strategy mapping for easy access
 STRATEGY_FUNCTIONS = {
-    2: generate_signals_strategy2_sustained,
-    3: generate_signals_strategy3_crossover,
-    4: generate_signals_strategy4_momentum,
+    2: generate_signals_sustained_strategy,
+    3: generate_signals_crossover_strategy,
+    4: generate_signals_momentum_strategy,
     6: generate_signals_breakout_strategy,
-    7: generate_signals_strategy7_divergence,
-    8: generate_signals_strategy8_trend_following,
-    9: generate_signals_strategy9_mean_reversion,
+    7: generate_signals_divergence_strategy,
+    8: generate_signals_trend_following_strategy,
+    9: generate_signals_mean_reversion_strategy,
 }
 
 # Strategy names for logging
@@ -52,99 +67,6 @@ STRATEGY_NAMES = {
     9: "Mean Reversion",
 }
 
-# Strategy categories for dynamic selection
-TRENDING_STRATEGIES = [3, 4, 6, 8]
-RANGE_BOUND_STRATEGIES = [2, 7, 9]
-VOLATILE_STRATEGIES = [6, 7]
-STABLE_STRATEGIES = [2, 3, 9]
-
-# Constants for performance scoring weights
-AGREEMENT_WEIGHT = 0.6
-STRENGTH_WEIGHT = 0.4
-
-# Normalization constant for oscillator extreme calculation
-OSCILLATOR_NORMALIZATION = 100.0
-
-# Valid strategy IDs
-VALID_STRATEGY_IDS = {2, 3, 4, 6, 7, 8, 9}
-
-
-# -----------------------------------------------------------------------------
-# Configuration Objects
-# -----------------------------------------------------------------------------
-
-@dataclass
-class DynamicSelectionConfig:
-    enabled: bool = False
-    lookback: int = 20
-    volatility_threshold: float = 0.6
-    trend_threshold: float = 0.5
-
-@dataclass
-class ConsensusConfig:
-    mode: Literal["threshold", "weighted"] = "threshold"
-    threshold: float = 0.5   # For threshold mode
-    
-    # Adaptive weights (Weighted mode)
-    adaptive_weights: bool = False
-    performance_window: int = 10
-    
-    # Weighted voting rules
-    weighted_min_diff: float = 0.1    # Difference between Long and Short weights must be > 0.1
-    weighted_min_total: float = 0.5   # Total weight of the winning side must be > 0.5
-
-@dataclass
-class StrategySpecificConfig:
-    # Strategy 2: Sustained
-    use_sustained: bool = True
-    min_bars_sustained: int = 3
-    
-    # Strategy 3: Crossover
-    use_crossover: bool = True
-    confirmation_bars: int = 2
-    
-    # Strategy 4: Momentum
-    use_momentum: bool = True
-    momentum_period: int = 3
-    momentum_threshold: float = 5.0
-    
-    # Strategy 6: Breakout
-    use_breakout: bool = False
-    breakout_upper_threshold: float = 100.0
-    breakout_lower_threshold: float = -100.0
-    breakout_confirmation_bars: int = 2
-    
-    # Strategy 7: Divergence
-    use_divergence: bool = False
-    divergence_lookback_period: int = 30
-    divergence_min_swing_bars: int = 5
-    
-    # Strategy 8: Trend Following
-    use_trend_following: bool = False
-    trend_filter_period: int = 10
-    trend_oscillator_threshold: float = 20.0
-    
-    # Strategy 9: Mean Reversion
-    use_mean_reversion: bool = False
-    mean_reversion_extreme_threshold: float = 80.0
-    mean_reversion_zero_cross_threshold: float = 10.0
-
-@dataclass
-class Strategy5Config:
-    enabled_strategies: List[int] = field(default_factory=list)
-    consensus: ConsensusConfig = field(default_factory=ConsensusConfig)
-    dynamic: DynamicSelectionConfig = field(default_factory=DynamicSelectionConfig)
-    params: StrategySpecificConfig = field(default_factory=StrategySpecificConfig)
-    
-    # General
-    min_signal_strength: float = 0.0
-    strategy_weights: Optional[Dict[int, float]] = None
-    
-    # Outputs
-    return_confidence_score: bool = False
-    return_strategy_stats: bool = False
-    enable_debug: bool = False
-
 
 # -----------------------------------------------------------------------------
 # Combined Strategy Class
@@ -155,7 +77,7 @@ class CombinedStrategy:
     Class-based implementation of Range Oscillator Strategy 5: Combined (Enhanced).
     """
 
-    def __init__(self, config: Optional[Strategy5Config] = None, **kwargs):
+    def __init__(self, config: Optional[CombinedStrategyConfig] = None, **kwargs):
         """
         Initialize the CombinedStrategy.
 
@@ -167,10 +89,10 @@ class CombinedStrategy:
         self.debug_enabled = self.config.enable_debug or os.environ.get("RANGE_OSCILLATOR_DEBUG", "false").lower() == "true"
         self._validate_config()
 
-    def _build_config(self, config: Optional[Strategy5Config], **kwargs) -> Strategy5Config:
+    def _build_config(self, config: Optional[CombinedStrategyConfig], **kwargs) -> CombinedStrategyConfig:
         """Construct configuration from arguments."""
         if config is None:
-            config = Strategy5Config()
+            config = CombinedStrategyConfig()
             
         # Helper to get arg from kwargs or default
         def get_arg(key, default):
@@ -490,16 +412,16 @@ class CombinedStrategy:
 
         p = self.config.params
         
-        run_st(2, STRATEGY_NAMES[2], generate_signals_strategy2_sustained,
+        run_st(2, STRATEGY_NAMES[2], generate_signals_sustained_strategy,
                oscillator=oscillator, ma=ma, range_atr=range_atr,
                min_bars_above_zero=p.min_bars_sustained, min_bars_below_zero=p.min_bars_sustained, enable_debug=False)
                
-        run_st(3, STRATEGY_NAMES[3], generate_signals_strategy3_crossover,
+        run_st(3, STRATEGY_NAMES[3], generate_signals_crossover_strategy,
                oscillator=oscillator, ma=ma, range_atr=range_atr,
                confirmation_bars=p.confirmation_bars, enable_debug=False)
 
         if len(oscillator) > p.momentum_period:
-            run_st(4, STRATEGY_NAMES[4], generate_signals_strategy4_momentum,
+            run_st(4, STRATEGY_NAMES[4], generate_signals_momentum_strategy,
                    oscillator=oscillator, ma=ma, range_atr=range_atr,
                    momentum_period=p.momentum_period, momentum_threshold=p.momentum_threshold, enable_debug=False)
 
@@ -509,16 +431,16 @@ class CombinedStrategy:
                lower_threshold=p.breakout_lower_threshold, confirmation_bars=p.breakout_confirmation_bars, enable_debug=False)
 
         if high is not None:
-            run_st(7, STRATEGY_NAMES[7], generate_signals_strategy7_divergence,
+            run_st(7, STRATEGY_NAMES[7], generate_signals_divergence_strategy,
                    high=high, low=low, close=close, oscillator=oscillator, ma=ma, range_atr=range_atr,
                    length=length, mult=mult, lookback_period=p.divergence_lookback_period,
                    min_swing_bars=p.divergence_min_swing_bars, enable_debug=False)
 
-        run_st(8, STRATEGY_NAMES[8], generate_signals_strategy8_trend_following,
+        run_st(8, STRATEGY_NAMES[8], generate_signals_trend_following_strategy,
                oscillator=oscillator, ma=ma, range_atr=range_atr, length=length, mult=mult,
                trend_filter_period=p.trend_filter_period, oscillator_threshold=p.trend_oscillator_threshold, enable_debug=False)
 
-        run_st(9, STRATEGY_NAMES[9], generate_signals_strategy9_mean_reversion,
+        run_st(9, STRATEGY_NAMES[9], generate_signals_mean_reversion_strategy,
                oscillator=oscillator, ma=ma, range_atr=range_atr, length=length, mult=mult,
                extreme_threshold=p.mean_reversion_extreme_threshold, zero_cross_threshold=p.mean_reversion_zero_cross_threshold, enable_debug=False)
 
@@ -629,10 +551,10 @@ class CombinedStrategy:
 
 
 # -----------------------------------------------------------------------------
-# Wrapper for Backward Compatibility
+# Convenience Wrapper Function
 # -----------------------------------------------------------------------------
 
-def generate_signals_strategy5_combined(
+def generate_signals_combined_all_strategy(
     high: Optional[pd.Series] = None,
     low: Optional[pd.Series] = None,
     close: Optional[pd.Series] = None,
@@ -645,14 +567,16 @@ def generate_signals_strategy5_combined(
     mult: float = 2.0,
     
     # Config object
-    config: Optional[Strategy5Config] = None,
+    config: Optional[CombinedStrategyConfig] = None,
     
     # Legacy args
     **kwargs
 ) -> Union[Tuple[pd.Series, pd.Series], Tuple[pd.Series, pd.Series, Optional[Dict], Optional[pd.Series]]]:
     """
     Generate trading signals based on Range Oscillator Strategy 5: Combined (Enhanced).
-    Wrapper around CombinedStrategy class for backward compatibility.
+    
+    This is a convenience wrapper around CombinedStrategy class that maintains
+    the original function signature for compatibility with existing code.
     """
     strategy = CombinedStrategy(config=config, **kwargs)
     return strategy.generate_signals(
@@ -662,11 +586,13 @@ def generate_signals_strategy5_combined(
     )
 
 __all__ = [
-    "generate_signals_strategy5_combined",
+    "generate_signals_combined_all_strategy",
     "CombinedStrategy",
-    "Strategy5Config",
+    "CombinedStrategyConfig",
     "ConsensusConfig",
     "DynamicSelectionConfig",
     "StrategySpecificConfig",
-    "STRATEGY_FUNCTIONS"
+    "STRATEGY_FUNCTIONS",
+    "STRATEGY_NAMES",
 ]
+
