@@ -637,3 +637,77 @@ OSCILLATOR_NORMALIZATION = 100.0
 
 # Valid strategy IDs
 VALID_STRATEGY_IDS = {2, 3, 4, 6, 7, 8, 9}
+
+# Range Oscillator Default Parameters
+# These parameters control Range Oscillator signal generation
+# Adjust based on backtesting results or market conditions
+RANGE_OSCILLATOR_LENGTH = 50  # Oscillator length parameter
+RANGE_OSCILLATOR_MULTIPLIER = 2.0  # Oscillator multiplier
+
+
+# ============================================================================
+# DECISION MATRIX CONFIGURATION
+# ============================================================================
+
+# Indicator Accuracy Values (for Decision Matrix voting system)
+# These values represent historical accuracy/performance of each indicator
+# Adjust based on backtesting results or actual performance data
+
+# Main Indicators Accuracy
+DECISION_MATRIX_ATC_ACCURACY = 0.65  # Adaptive Trend Classification accuracy
+DECISION_MATRIX_OSCILLATOR_ACCURACY = 0.70  # Range Oscillator accuracy (highest)
+
+# SPC Strategy Accuracies (for weighted aggregation)
+DECISION_MATRIX_SPC_CLUSTER_TRANSITION_ACCURACY = 0.68  # Cluster Transition strategy accuracy
+DECISION_MATRIX_SPC_REGIME_FOLLOWING_ACCURACY = 0.66  # Regime Following strategy accuracy
+DECISION_MATRIX_SPC_MEAN_REVERSION_ACCURACY = 0.64  # Mean Reversion strategy accuracy
+
+# SPC Aggregated Accuracy (weighted average of 3 strategies)
+# Formula: (0.68 + 0.66 + 0.64) / 3 ≈ 0.66
+DECISION_MATRIX_SPC_AGGREGATED_ACCURACY = 0.66
+
+# Dictionary for easy access to SPC strategy accuracies
+DECISION_MATRIX_SPC_STRATEGY_ACCURACIES = {
+    'cluster_transition': DECISION_MATRIX_SPC_CLUSTER_TRANSITION_ACCURACY,
+    'regime_following': DECISION_MATRIX_SPC_REGIME_FOLLOWING_ACCURACY,
+    'mean_reversion': DECISION_MATRIX_SPC_MEAN_REVERSION_ACCURACY,
+}
+
+# Dictionary for all indicator accuracies
+DECISION_MATRIX_INDICATOR_ACCURACIES = {
+    'atc': DECISION_MATRIX_ATC_ACCURACY,
+    'oscillator': DECISION_MATRIX_OSCILLATOR_ACCURACY,
+    'spc': DECISION_MATRIX_SPC_AGGREGATED_ACCURACY,
+}
+
+# SPC Strategy-Specific Parameters
+# These parameters control signal generation for each SPC strategy
+# Adjust based on backtesting results or market conditions
+
+# Cluster Transition Strategy Parameters
+SPC_CLUSTER_TRANSITION_MIN_SIGNAL_STRENGTH = 0.3  # Minimum signal strength threshold
+SPC_CLUSTER_TRANSITION_MIN_REL_POS_CHANGE = 0.1  # Minimum relative position change
+
+# Regime Following Strategy Parameters
+SPC_REGIME_FOLLOWING_MIN_REGIME_STRENGTH = 0.7  # Minimum regime strength threshold
+SPC_REGIME_FOLLOWING_MIN_CLUSTER_DURATION = 2  # Minimum bars in same cluster
+
+# Mean Reversion Strategy Parameters
+SPC_MEAN_REVERSION_EXTREME_THRESHOLD = 0.2  # Real_clust threshold for extreme detection
+SPC_MEAN_REVERSION_MIN_EXTREME_DURATION = 3  # Minimum bars in extreme state
+
+# Dictionary for easy access to SPC strategy parameters
+SPC_STRATEGY_PARAMETERS = {
+    'cluster_transition': {
+        'min_signal_strength': SPC_CLUSTER_TRANSITION_MIN_SIGNAL_STRENGTH,
+        'min_rel_pos_change': SPC_CLUSTER_TRANSITION_MIN_REL_POS_CHANGE,
+    },
+    'regime_following': {
+        'min_regime_strength': SPC_REGIME_FOLLOWING_MIN_REGIME_STRENGTH,
+        'min_cluster_duration': SPC_REGIME_FOLLOWING_MIN_CLUSTER_DURATION,
+    },
+    'mean_reversion': {
+        'extreme_threshold': SPC_MEAN_REVERSION_EXTREME_THRESHOLD,
+        'min_extreme_duration': SPC_MEAN_REVERSION_MIN_EXTREME_DURATION,
+    },
+}
