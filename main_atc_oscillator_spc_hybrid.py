@@ -1002,8 +1002,10 @@ class ATCOscillatorSPCHybridAnalyzer:
             # Temporarily switch to threshold mode
             original_mode = self.spc_aggregator.config.mode
             self.spc_aggregator.config.mode = "threshold"
-            vote, strength, _ = self.spc_aggregator.aggregate(symbol_data, signal_type)
-            self.spc_aggregator.config.mode = original_mode
+            try:
+                vote, strength, _ = self.spc_aggregator.aggregate(symbol_data, signal_type)
+            finally:
+                self.spc_aggregator.config.mode = original_mode
         else:
             # Try weighted mode first
             vote, strength, _ = self.spc_aggregator.aggregate(symbol_data, signal_type)
@@ -1012,8 +1014,10 @@ class ATCOscillatorSPCHybridAnalyzer:
             if vote == 0:
                 original_mode = self.spc_aggregator.config.mode
                 self.spc_aggregator.config.mode = "threshold"
-                vote, strength, _ = self.spc_aggregator.aggregate(symbol_data, signal_type)
-                self.spc_aggregator.config.mode = original_mode
+                try:
+                    vote, strength, _ = self.spc_aggregator.aggregate(symbol_data, signal_type)
+                finally:
+                    self.spc_aggregator.config.mode = original_mode
         
         # Convert vote to 1/0 format for Decision Matrix compatibility
         # Only accept vote if it matches the expected signal direction

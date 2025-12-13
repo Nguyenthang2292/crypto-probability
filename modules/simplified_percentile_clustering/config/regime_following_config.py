@@ -39,6 +39,8 @@ class RegimeFollowingConfig:
 
     def __post_init__(self):
         """Set default cluster preferences if not provided and validate config."""
+        if self.bullish_clusters is None:
+            self.bullish_clusters = [1, 2]
         if self.bearish_clusters is None:
             self.bearish_clusters = [0]
         # Validate configuration
